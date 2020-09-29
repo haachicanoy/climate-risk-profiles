@@ -1,0 +1,113 @@
+---
+title: "Country --- COUNTRY"
+subtitle: "COUNTY"
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+#### COUNTY district
+:::::: {.columns}
+::: {.column width="10%"}
+![](D:/Slides/COUNTRY/COUNTY/maps/COUNTY.png){width="10%"}
+:::
+::: {.column width="90%"}
+![](D:/Slides/COUNTRY/COUNTY/COUNTY_climatology_auto_seasons.png)
+:::
+::::::
+
+#### COUNTY Multi Annual Climate with Elevation profile
+:::::: {.columns}
+::: {.column width="10%"}
+![](D:/Slides/COUNTRY/COUNTY/COUNTY_elevation.png){width=3%}
+:::
+::: {.column width="90%"}
+![](D:/Slides/COUNTRY/COUNTY/maps/A_Multi_Anual.png)
+:::
+::::::
+
+#### Number of consecutive dry days _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_CDD_1.png){width=20%}
+
+#### Number of consecutive dry days _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_CDD_2.png){width=20%}
+
+#### Temporal variation in CDD _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_CDD_season_1.png){width=5%} 
+
+#### Temporal variation in CDD _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_CDD_season_2.png){width=5%} 
+
+#### Maximum 5-day running average precipitation _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_P5D_1.png){width=20%}
+
+#### Maximum 5-day running average precipitation _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_P5D_2.png){width=20%}
+
+#### Temporal variation for P5D _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_P5D_season_1.png){width=5%}
+
+#### Temporal variation for P5D _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_P5D_season_2.png){width=5%}
+
+#### 95th percentile of daily precipitation _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_P95_1.png){width=20%}
+
+#### 95th percentile of daily precipitation _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_P95_2.png){width=20%}
+
+#### Temporal variation for P95 _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_P95_season_1.png){width=5%}
+
+#### Temporal variation for P95 _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_P95_season_2.png){width=5%}
+
+#### Total number of days with maximum temperature greater or equal to 35°C _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_NT35_1.png){width=20%}
+
+#### Total number of days with maximum temperature greater or equal to 35°C _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_NT35_2.png){width=20%}
+
+#### Temporal variation of NT35 _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_NT35_season_1.png){width=5%}
+
+#### Temporal variation of NT35 _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_NT35_season_2.png){width=5%}
+
+#### Moisture stress _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_ndws_1.png){width=20%}
+
+#### Moisture stress _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/maps/Dif_ndws_2.png){width=20%}
+
+#### Temporal variation of NDWS _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_ndws_season_1.png){width=5%}
+
+#### Temporal variation of NDWS _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_ndws_season_2.png){width=5%}
+
+#### Start of growing season 1
+![](D:/Slides/COUNTRY/COUNTY/maps/all_SLGP_1.png){width=20%}
+
+#### Start of growing season 2
+![](D:/Slides/COUNTRY/COUNTY/maps/all_SLGP_2.png){width=20%}
+
+#### Temporal variation of SLGP _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_SLGP_season_1.png){width=5%}
+
+#### Temporal variation of SLGP _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_SLGP_season_2.png){width=5%}
+
+#### Length of growing season 1
+![](D:/Slides/COUNTRY/COUNTY/maps/all_LGP_1.png){width=20%}
+
+#### Length of growing season 2
+![](D:/Slides/COUNTRY/COUNTY/maps/all_LGP_2.png){width=20%}
+
+#### Temporal variation of LGP _(season 1)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_LGP_season_1.png){width=5%}
+
+#### Temporal variation of LGP _(season 2)_
+![](D:/Slides/COUNTRY/COUNTY/time_series/ts_LGP_season_2.png){width=5%}
