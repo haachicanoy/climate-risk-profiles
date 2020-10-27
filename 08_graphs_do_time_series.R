@@ -20,11 +20,13 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
   country <<- country
   county  <<- county
   cat('>>> Load indices for the historical period\n')
-  past <- fst::fst(paste0(root,"/results/",country,"/past/",county,"_1985_2015.fst")) %>% data.frame
+  
+  
+  past <- fst::fst(paste0(root,"/results/",country,"/past/",county,"_1985_2015_corrected.fst")) %>% data.frame
   
   cat('>>> Load indices for the future period\n')
   futDir  <- paste0(root,'/results/',country,'/future')
-  fut_fls <- list.files(futDir, pattern = paste0('^',county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9].fst'), recursive = T)
+  fut_fls <- list.files(futDir, pattern = paste0('^',county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_corrected.fst'), recursive = T)
   fut_fls <- paste0(futDir,'/',fut_fls)
   future  <- fut_fls %>%
     purrr::map(.f = function(x){df <- fst::fst(x) %>% data.frame; return(df)}) %>%
@@ -32,6 +34,9 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
   
   # Join data
   df <- rbind(past, future)
+  # =----------------------------------
+  #df <- df %>% filter(id %in% crd$id)
+  # =----------------------------------
   if('semester' %in% colnames(df)){
     colnames(df)[which(colnames(df) == 'semester')] <- 'season'
   }
@@ -39,13 +44,13 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
   if('2' %in% df$season){gsub('2', 's2', x = df$season, fixed = T)}
   
   cat('>>> Prepare climatology-based indices: CDD, P5D, P95, NT35, NDWS\n')
-  df1_ <- df %>%
+  df1_ <- df %>% dplyr::select(CDD,P5D,P95,NT35, ndws, everything() ) %>% #drop_na() %>%
     dplyr::select(year,season,CDD:ndws) %>%
     tidyr::pivot_longer(cols = 'CDD':'ndws', names_to = 'Indices', values_to = 'Value') %>%
     dplyr::group_split(Indices)
   
   cat('>>> Prepare water balance-based indices: SLGP and LGP\n')
-  df2_ <- df %>%
+  df2_ <- df %>% dplyr::select(gSeason,SLGP, LGP,  everything() ) %>% 
     dplyr::select(year,gSeason:LGP) %>%
     tidyr::pivot_longer(cols = 'SLGP':'LGP', names_to = 'Indices', values_to = 'Value') %>%
     dplyr::group_split(Indices)
@@ -70,11 +75,9 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
                       Year      = as.Date(ISOdate(year, 1, 1)),
                       season    = as.factor(season))
       if(length(unique(df_summ$season)) == 1){
-        sem.labs <- 'S:1'
-        names(sem.labs) <- 's1'
+        sem.labs <- as_labeller(c('s1' = 'S:1'))
       } else {
-        sem.labs <- c('S:1','S:2')
-        names(sem.labs) <- c('s1','s2')
+        sem.labs <- as_labeller(c('s1' = 'S:1', 's2' = 'S:2', 's3' = 'S:3','s4' = 'S:4'))
       }
       df_summ_ <- df_summ %>%
         dplyr::group_by(season) %>%
@@ -83,7 +86,7 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
       1:length(df_summ_) %>%
         purrr::map(.f = function(i){
           df_summ2 <- df_summ_[[i]]
-          plt      <- df_summ2 %>%
+          plt      <-   df_summ2 %>%
             dplyr::filter(Serie == 'Past') %>%
             ggplot2::ggplot(aes(x = Year, y = mean, colour = season)) +
             ggplot2::geom_line() +
@@ -137,8 +140,8 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
         sem.labs <- 'S:1'
         names(sem.labs) <- '1'
       } else {
-        sem.labs <- c('S:1','S:2')
-        names(sem.labs) <- c('1','2')
+        sem.labs <- c('S:1','S:2', 'S:3')
+        names(sem.labs) <- c('1','2','3')
       }
       df_summ_ <- df_summ %>%
         dplyr::group_by(gSeason) %>%
@@ -179,4 +182,194 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
   
   cat('>>> Graphics done.\n')
 }
-time_series_plot(country = 'Kenya', county = 'Vihiga')
+
+
+
+
+# =--------------------------------------------------
+iso3c <- 'KEN'
+adm_lvl <- 1
+# Load county shapefile
+if(country == 'India'){
+  # India 
+  country1 <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
+  shp <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
+  shp <- shp[shp@data$ST_NM %in% C_shp,]
+  plot(shp)
+  shp@data$ISO <- iso3c
+}else{
+  country1 <- readRDS(glue::glue('{root}/data/shps/shps_from_R/{country}/gadm36_{iso3c}_{adm_lvl}_sp.rds')) 
+  shp <- readRDS(glue::glue('{root}/data/shps/shps_from_R/{country}/gadm36_{iso3c}_{adm_lvl}_sp.rds')) 
+  shp@data$NAME_1 <- iconv(shp@data$NAME_1,from="UTF-8",to="ASCII//TRANSLIT")
+  shp@data$NAME_1 <- case_when(shp@data$NAME_1 == 'Trans Nzoia' ~ 'Trans-Nzoia',
+                               shp@data$NAME_1 == "Murang'a" ~ 'Muranga', 
+                               TRUE ~ shp@data$NAME_1)
+  shp <- shp[shp@data$NAME_1 %in% county,]
+  plot(shp)
+  shp@data$ISO <- iso3c
+}
+
+# Load id coords
+crd <- vroom('//dapadfs/workspace_cluster_8/climateriskprofiles/data/id_all_country.csv')
+crd <- crd %>%
+  dplyr::filter(Country == country)
+pnt <- crd %>% dplyr::select(x,y) %>% sp::SpatialPoints(coords = .)
+crs(pnt) <- crs(shp)
+# Filter coordinates that are present in the county
+pnt <- sp::over(pnt, shp) %>% data.frame %>% dplyr::select(ISO) %>% complete.cases() %>% which()
+crd <- crd[pnt,]
+crd <<- crd
+
+# =--------------------------------------------------
+
+
+
+
+
+
+country <- 'Kenya'
+count_i  <- c('Kakamega')
+
+for(i in 1:length(count_i)){
+  time_series_plot(country = country, county = count_i[i])}
+
+
+
+
+# =-----------------------------------------
+# Tablas...
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+### Do time series graphs
+### H. Achicanoy & A. Esquivel
+### Alliance Bioversity-CIAT, 2020
+
+
+ts_table <- function(country = 'Benin', county = 'Borgou'){
+  
+  country <<- country
+  county  <<- county
+  cat('>>> Load indices for the historical period\n')
+  # past <- fst::fst(paste0(root,"/results/",country,"/past/",county,"_1985_2015_corrected_idw.fst")) %>% data.frame
+  past <- fst::fst(paste0(root,"/results/",country,"/past/",county,"_1985_2015_corrected.fst")) %>% data.frame
+  
+  cat('>>> Load indices for the future period\n')
+  futDir  <- paste0(root,'/results/',country,'/future')
+  # fut_fls <- list.files(futDir, pattern = paste0('^',county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_corrected_idw.fst'), recursive = T)
+  fut_fls <- list.files(futDir, pattern = paste0('^',county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_corrected.fst'), recursive = T)
+  fut_fls <- paste0(futDir,'/',fut_fls)
+  future  <- fut_fls %>%
+    purrr::map(.f = function(x){df <- fst::fst(x) %>% data.frame; return(df)}) %>%
+    do.call(rbind, .)
+  
+  # Join data
+  df <- rbind(past, future)
+  # =----------------------------------
+  #df <- df %>% filter(id %in% crd$id)
+  # =----------------------------------
+  if('semester' %in% colnames(df)){
+    colnames(df)[which(colnames(df) == 'semester')] <- 'season'
+  }
+  if('1' %in% df$season){gsub('1', 's1', x = df$season, fixed = T)}
+  if('2' %in% df$season){gsub('2', 's2', x = df$season, fixed = T)}
+  
+  cat('>>> Prepare climatology-based indices: CDD, P5D, P95, NT35, NDWS\n')
+  df1_ <- df %>% dplyr::select(CDD,P5D,P95,NT35, ndws, everything() ) %>%
+    dplyr::select(year,season,CDD:ndws) %>%
+    tidyr::pivot_longer(cols = 'CDD':'ndws', names_to = 'Indices', values_to = 'Value') %>%
+    dplyr::group_split(Indices)
+  
+  cat('>>> Prepare water balance-based indices: SLGP and LGP\n')
+  df2_ <- df %>% dplyr::select(gSeason,SLGP, LGP,  everything() ) %>%
+    dplyr::select(year,gSeason,SLGP, LGP) %>%
+    mutate(gSeason = case_when(gSeason == 1 ~ 's1', gSeason == 2 ~ 's2', TRUE ~ as.character(gSeason))) %>%
+    tidyr::pivot_longer(cols = 'SLGP':'LGP', names_to = 'Indices', values_to = 'Value') %>%
+    dplyr::group_split(Indices)
+  
+  # Output folder
+  # outDir <- paste0(root,'/results/',country,'/graphs/',tolower(county),'/time_series')
+  # if(!dir.exists(outDir)){dir.create(outDir, recursive = T)}
+  
+  cat('>>> Creating tables for climatology-based indicators\n')
+  st_indx <- df1_ %>%
+    purrr::map(.f = function(tbl){
+      idx <- tbl$Indices %>% unique
+      df_summ <- tbl %>%
+        dplyr::group_by(year,season) %>%
+        dplyr::summarise(n      = n(),
+                         mean   = mean(Value, na.rm = T),
+                         sd     = sd(Value, na.rm = T)) %>%
+        dplyr::mutate(sem       = sd/sqrt(n-1),
+                      CI_lower  = mean + qt((1-0.95)/2, n - 1) * sem,
+                      CI_upper  = mean - qt((1-0.95)/2, n - 1) * sem,
+                      Serie     = ifelse(year %in% 1985:2015, 'Past','Fut'),
+                      Year      = as.Date(ISOdate(year, 1, 1)),
+                      season    = as.factor(season))
+      if(length(unique(df_summ$season)) == 1){
+        sem.labs <- 'S:1'
+        names(sem.labs) <- 's1'
+      } else {
+        sem.labs <- c('S:1','S:2')
+        names(sem.labs) <- c('s1','s2')
+      }
+      
+      df_summ_ <- df_summ %>% dplyr::arrange(season) %>% 
+        dplyr::select(season, year, Serie, mean, CI_lower, CI_upper) %>% 
+        setNames(c('season', 'year', 'time', idx, glue::glue('{idx}_CI_lower'), glue::glue('{idx}_CI_upper')))
+      
+      return(df_summ_)
+    }) %>% 
+    reduce(full_join)
+  
+  max_lvl <- unique(st_indx$season)
+  
+  cat('>>> Creating graphs for water balance-based indicators\n')
+  sd_indx <- df2_ %>%
+    purrr::map(.f = function(tbl){
+      idx <- tbl$Indices %>% unique
+      tbl <- tbl %>%
+        tidyr::drop_na()
+      df_summ <- tbl %>%
+        dplyr::group_by(year,gSeason) %>%
+        dplyr::summarise(n      = dplyr::n(),
+                         mean   = mean(Value, na.rm = T),
+                         sd     = sd(Value, na.rm = T)) %>%
+        dplyr::mutate(sem       = sd/sqrt(n-1),
+                      CI_lower  = mean + qt((1-0.95)/2, n - 1) * sem,
+                      CI_upper  = mean - qt((1-0.95)/2, n - 1) * sem,
+                      Serie     = ifelse(year %in% 1985:2015, 'Past','Fut'),
+                      Year      = as.Date(ISOdate(year, 1, 1)),
+                      gSeason  = as.factor(gSeason))
+      if(length(unique(df_summ$gSeason)) == 1){
+        sem.labs <- 'S:1'
+        names(sem.labs) <- '1'
+      } else {
+        sem.labs <- c('S:1','S:2')
+        names(sem.labs) <- c('1','2')
+      }
+      # df_summ_ <- df_summ %>% dplyr::group_by(gSeason) %>% dplyr::group_split(gSeason)
+      
+      df_summ_ <- df_summ %>% dplyr::arrange(gSeason) %>% filter(gSeason %in% max_lvl) %>% 
+        dplyr::select(gSeason, year, Serie, mean, CI_lower, CI_upper) %>% 
+        setNames(c('season', 'year', 'time', idx, glue::glue('{idx}_CI_lower'), glue::glue('{idx}_CI_upper')))
+      
+      return(df_summ_)
+    }) %>% 
+    reduce(full_join)
+  
+  all_idx <- full_join(st_indx, sd_indx) %>%  
+    mutate(Country = country, County = county) %>% 
+    dplyr::select(Country, County, season, year, time, everything()) %>%  drop_na(season)
+  
+  cat('>>> Table\n')
+  return(all_idx)}
+
+ts_tbl <- list()
+for(i in 1:length(count_i)){
+  ts_tbl[[i]] <- ts_table(country = country, county = count_i[i])} 
+
+ts_tbl <- ts_tbl %>% bind_rows()
+
+outDir <- paste0(root,'/results/',country,'/graphs/', country, '.csv')
+write_csv(x = ts_tbl, path = outDir)
+
