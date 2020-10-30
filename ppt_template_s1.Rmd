@@ -1,0 +1,74 @@
+---
+title: "Country --- COUNTRY"
+subtitle: "COUNTY"
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+#### COUNTY district
+:::::: {.columns}
+::: {.column width="10%"}
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/COUNTY.png){width="10%"}
+:::
+::: {.column width="90%"}
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/COUNTY_climatology_manual_seasons.png)
+:::
+::::::
+
+
+
+#### COUNTY Multi Annual Climate with Elevation profile
+:::::: {.columns}
+::: {.column width="10%"}
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/COUNTY_elevation.png){width=3%}
+:::
+::: {.column width="90%"}
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/A_Multi_Anual.png)
+:::
+::::::
+
+
+#### Number of consecutive dry days _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/Dif_CDD_1.png){width=20%}
+
+#### Temporal variation in CDD _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_CDD_season_1.png){width=5%} 
+
+#### Maximum 5-day running average precipitation _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/Dif_P5D_1.png){width=20%}
+
+#### Temporal variation for P5D _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_P5D_season_1.png){width=5%}
+
+#### 95th percentile of daily precipitation _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/Dif_P95_1.png){width=20%}
+
+#### Temporal variation for P95 _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_P95_season_1.png){width=5%}
+
+#### Total number of days with maximum temperature greater or equal to 35°C _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/Dif_NT35_1.png){width=20%}
+
+#### Temporal variation of NT35 _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_NT35_season_1.png){width=5%}
+
+#### Moisture stress _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/Dif_ndws_1.png){width=20%}
+
+#### Temporal variation of NDWS _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_ndws_season_1.png){width=5%}
+
+#### Start of growing season 1
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/all_SLGP_1.png){width=20%}
+
+#### Temporal variation of SLGP _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_SLGP_season_1.png){width=5%}
+
+#### Length of growing season 1
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/maps/all_LGP_1.png){width=20%}
+
+#### Temporal variation of LGP _(season 1)_
+![](D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/Slides/COUNTY/time_series/ts_LGP_season_1.png){width=5%}
