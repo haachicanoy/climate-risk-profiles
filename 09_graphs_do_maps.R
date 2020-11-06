@@ -2,15 +2,11 @@
 # raster::getData('GADM', country='KEN', level=2)
 # Ken <- readRDS('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_countrys_maps/Kenya_P/gadm36_KEN_2_sp.rds')  
 
-
 # Maps for 
 # H. Achicanoy & A. Esquivel
 # Alliance Bioversity-CIAT
 # July - 2020. 
-
-
-rm(list = ls())
-gc(reset = TRUE)
+rm(list = ls()); gc(reset = TRUE)
 
 # =--------------------
 # Packages 
@@ -22,14 +18,11 @@ suppressMessages(pacman::p_load(tidyr, dplyr, tibble, ggplot2, raster, ncdf4, sf
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Kenya'
-count_i  <-    c('Kakamega')
-
-iso3c <- 'KEN'
-Big <- 'N'
+country <- 'Burkina_Faso'
+count_i  <-    c('Sud-Ouest')
+iso3c <- 'BFA'
+Big <- 'B'
 adm_lvl <- 1
-
-
 
 for(i in 1:length(count_i)){
   county  <- count_i[i]
@@ -99,10 +92,8 @@ for(i in 1:length(count_i)){
       
     } else{print('Change big argument... >.<')}
     
-    
     limits <- dplyr::select(median_data, CDD, P5D, P95, NT35, ndws) %>% 
       dplyr::summarise_all(.funs = c('min', 'max'))
-    
     
     median_data <- median_data %>% dplyr::filter(time == 'future') %>%
       dplyr::rename('CDD_f' = 'CDD'   , 'P5D_f' = 'P5D'  , 'P95_f'= 'P95' , 'NT35_f' = 'NT35', 
@@ -111,16 +102,22 @@ for(i in 1:length(count_i)){
       dplyr::inner_join(dplyr::filter(median_data , time == 'past') %>% dplyr::select(-time), . ) %>%
       dplyr::mutate(CDD_c = CDD_f - CDD, P5D_c = P5D_f - P5D, P95_c = P95_f - P95, NT35_c = NT35_f -NT35, ndws_c = ndws_f - ndws)
     
-    
     # Aqui se hace solo la figura base...
     shp_sf <- shp  %>% sf::st_as_sf()
     country <- country1 %>% sf::st_as_sf()
     xlims <- sf::st_bbox(shp_sf)[c(1, 3)]
     ylims <- sf::st_bbox(shp_sf)[c(2, 4)]
     
-    b <- ggplot() +
+    limx <- sf::st_bbox(country)[c(1, 3)]
+    limy <- sf::st_bbox(country)[c(2, 4)]
+    
+    map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>% 
+      sf::st_as_sf()
+    
+    b <- ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+      geom_sf(data = country, fill = '#f2f2f2', color = gray(.3), alpha = 0.35) +
       geom_sf(data = shp_sf, fill = 'red', color = gray(.1)) +
-      geom_sf(data = country, fill = NA, color = gray(.5)) +
+      coord_sf(xlim = limx, ylim = limy) +
       theme_bw() +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
             axis.text.x = element_blank(), axis.text.y = element_blank(),
@@ -142,15 +139,14 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_a}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      # style = north_arrow_fancy_orienteering) +
+                           guide = guide_colourbar(barwidth = 12, 
+                                                   label.theme = element_text(angle = 25, size = 14))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_a}_past_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
@@ -166,14 +162,12 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_a}\n(days)  '), title = 'Future',x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$CDD_min, 2)-0.1, round(limits$CDD_max,2) + 0.1), 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_a}_future_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -186,14 +180,12 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_a}\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      # style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_a}_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -220,14 +212,12 @@ for(i in 1:length(count_i)){
       scale_fill_gradientn(colours = blues9, limits = c(round(limits$P5D_min, 2)- 0.1, 
                                                         round(limits$P5D_max, 2)+0.1), 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_c}_past_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -241,14 +231,12 @@ for(i in 1:length(count_i)){
       scale_fill_gradientn(colours = blues9, limits = c(round(limits$P5D_min, 2)- 0.1, 
                                                         round(limits$P5D_max, 2)+0.1), 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_c}_future_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -261,14 +249,12 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_c}\n(mm)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_c}_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -281,7 +267,6 @@ for(i in 1:length(count_i)){
     
     
     #===---------------------------------------------------------
-    # =------------
     index_d <- 'P95'
     
     d <- ggplot() +
@@ -293,14 +278,12 @@ for(i in 1:length(count_i)){
       scale_fill_gradientn(colours = blues9, limits = c(round(limits$P95_min,2)-0.1, 
                                                         round(limits$P95_max, 2)+0.1), 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_d}_past_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -315,14 +298,12 @@ for(i in 1:length(count_i)){
       scale_fill_gradientn(colours = blues9, limits =  c(round(limits$P95_min,2)-0.1, 
                                                          round(limits$P95_max, 2)+0.1), 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_d}_future_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
@@ -339,8 +320,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_d}_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -367,14 +350,12 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_e}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-      # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-      #                                   pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-      #                                   style = north_arrow_fancy_orienteering) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_past_S{semester}.png') , width = 8, height = 5.5)
     
@@ -390,8 +371,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
     
@@ -406,8 +389,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_e}_S{semester}.png') , width = 8, height = 5.5)
     
@@ -435,7 +420,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_f}_past_S{semester}.png') , width = 8, height = 5.5)
     
@@ -451,8 +439,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
     
@@ -467,8 +457,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_f}_S{semester}.png') , width = 8, height = 5.5)
     
@@ -542,7 +534,7 @@ for(i in 1:length(count_i)){
     
     limits_gs <- dplyr::select(gSeason_i, gSeason) %>% summarise_all(.funs = c('min', 'max'))
     
-    # # Primero dejaré hechos los de presente... luego repito los de futuro...
+    # # Primero dejar? hechos los de presente... luego repito los de futuro...
     gs <-  ggplot() +
       geom_tile(data = filter(gSeason_i, time == 'past'), aes(x = x, y = y, fill = gSeason)) +
       geom_sf(data = pais, fill = NA, color = gray(.8)) +
@@ -553,8 +545,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/gSeason_past.png') , width = 8, height = 5.5, dpi = 300)
@@ -570,8 +564,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/gSeason_future.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -590,8 +586,10 @@ for(i in 1:length(count_i)){
                            guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() +
-      theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_gSeason.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -631,14 +629,12 @@ for(i in 1:length(count_i)){
              x = 'Longitude', y = 'Latitude') +
         scale_fill_gradientn(colours = blues9, limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
                              guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-        # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-        # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-        # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-        # style = north_arrow_fancy_orienteering) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() +
-        theme(legend.position = 'bottom')
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                           legend.title=element_text(size=15), 
+                           legend.spacing = unit(5, units = 'cm'),
+                           legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/SLGP_past_{i}.png') , width = 8, height = 4, dpi = 300)
       
@@ -654,14 +650,12 @@ for(i in 1:length(count_i)){
              title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
         scale_fill_gradientn(colours = blues9, limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
                              guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-        # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-        # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-        # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-        # style = north_arrow_fancy_orienteering) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() +
-        theme(legend.position = 'bottom')
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                           legend.title=element_text(size=15), 
+                           legend.spacing = unit(5, units = 'cm'),
+                           legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/SLGP_future_{i}.png') , width = 8, height = 4, dpi = 300)
@@ -677,14 +671,12 @@ for(i in 1:length(count_i)){
              title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
         scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
                              guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-        # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-        # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-        # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-        # style = north_arrow_fancy_orienteering) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() +
-        theme(legend.position = 'bottom')
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                           legend.title=element_text(size=15), 
+                           legend.spacing = unit(5, units = 'cm'),
+                           legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_SLGP_{i}.png') , width = 8, height = 4, dpi = 300)
       
@@ -716,14 +708,12 @@ for(i in 1:length(count_i)){
              title = glue::glue('gSeason = {i}; Historic'),x = 'Longitude', y = 'Latitude') +
         scale_fill_gradientn(colours = blues9, limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
                              guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-        # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-        # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-        # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-        # style = north_arrow_fancy_orienteering) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() +
-        theme(legend.position = 'bottom')
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                           legend.title=element_text(size=15), 
+                           legend.spacing = unit(5, units = 'cm'),
+                           legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/LGP_past_{i}.png') , width = 8, height = 4, dpi = 300)
       
@@ -738,14 +728,12 @@ for(i in 1:length(count_i)){
              title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
         scale_fill_gradientn(colours = blues9, limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
                              guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-        # ggspatial::annotation_scale(location = "br", width_hint = 0.5) +
-        # ggspatial::annotation_north_arrow(location = "br", which_north = "true",
-        # pad_x = unit(0.1, "in"), pad_y = unit(0.2, "in"), # 0.2 # 0.3
-        # style = north_arrow_fancy_orienteering) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() +
-        theme(legend.position = 'bottom')
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                           legend.title=element_text(size=15), 
+                           legend.spacing = unit(5, units = 'cm'),
+                           legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/LGP_future_{i}.png') , width = 8, height = 4, dpi = 300)
       
@@ -762,8 +750,10 @@ for(i in 1:length(count_i)){
                              guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() +
-        theme(legend.position = 'bottom')
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                           legend.title=element_text(size=15), 
+                           legend.spacing = unit(5, units = 'cm'),
+                           legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_LGP_{i}.png') , width = 8, height = 4, dpi = 300)
       
@@ -794,69 +784,41 @@ for(i in 1:length(count_i)){
       dplyr::summarise_all(~round(. , 1))
     # =--------------------------------------------------------
     
-    # prueba <- historic %>% ungroup %>% dplyr::select(prec) %>% 
-    #   arrange(prec) %>% slice(1, n()) %>% .$prec
-    # 
-    # range <- (prueba[2]-prueba[1])/5
-    # 
-    # prec_p <- tibble(tr =  c('a', 'b', 'c', 'd'), 
-    # limits = c(prueba[1]+range, round(prueba[1]+(2*range), 1), round(prueba[1]+(3*range), 1), prueba[2]))
-    # labels_l <- c(glue::glue('< {prec_p[2,2]}'), glue::glue('{prec_p[2,2]}-{prec_p[3,2]}'), glue::glue('> {prec_p[3,2]}'))
-    
-    # historic_p <- historic %>% dplyr::select(id, x, y, ISO3, Country, prec) %>%
-    #   mutate(val = case_when( prec < prec_p[2,2] ~ 1, 
-    #                                        prec >= prec_p[2,2] & prec < prec_p[3,2]  ~ 2,
-    #                                        prec >= prec_p[3,2]  ~ 3,
-    #                                        TRUE ~ 4) %>% as.factor())
-    
-    
-    # =--------------------------------------------------------
-    
     prec <- ggplot() + geom_tile(data = historic, aes(x = x, y = y, fill = prec )) +
       geom_sf(data = country, fill = NA, color = gray(.8)) +
       geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
       coord_sf(xlim = xlims, ylim = ylims) +
-      labs(fill = glue::glue('(mm)  '), title = 'Historical Annual Mean Precipitation (mm/year)',x = 'Longitude', y = 'Latitude') +
-      # scale_fill_brewer(palette="Greens",  labels = labels_l, 
-      # guide = guide_legend(barwidth = 12, label.theme = element_text(angle = 0))) +
+      labs(fill = glue::glue('(mm)'), title = 'Historical Annual\nMean Precipitation (mm/year)',x = 'Longitude', y = 'Latitude') +
       scale_fill_gradientn(colours = blues9, 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                           guide = guide_colourbar(barwidth = 12, 
+                                                   label.theme = element_text(angle = 25, size = 14))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/H_prec.png') , width = 8, height = 5.5, dpi = 300)
     
     ##########################################################
     
-    # prueba_t <- historic %>% ungroup %>% dplyr::select(tmean) %>% 
-    #   arrange(tmean) %>% slice(1, n()) %>% .$tmean
-    # 
-    # range_t <- (prueba_t[2]-prueba_t[1])/4
-    # 
-    # temp_p <- tibble(tr =  c('a', 'b', 'c', 'd'), 
-    #                  limits = c(prueba_t[1]+range_t, round(prueba_t[1]+(2*range_t), 1), round(prueba_t[1]+(3*range_t), 1), prueba_t[2]))
-    # labels_t <- c(glue::glue('< {temp_p[2,2]}'), glue::glue('{temp_p[2,2]}-{temp_p[3,2]}'), glue::glue('> {temp_p[3,2]}'))
-    
-    # historic_t <- historic %>% dplyr::select(id, x, y, ISO3, Country, tmean) %>%
-    #   mutate(val = case_when( tmean < temp_p[2,2] ~ 1, 
-    #                           tmean >= temp_p[2,2] & tmean < temp_p[3,2]  ~ 2,
-    #                           tmean >= temp_p[3,2]  ~ 3,
-    #                           TRUE ~ 4) %>% as.factor())
-    
-    tmn <- ggplot() + geom_tile(data = historic, aes(x = x, y = y, fill = tmean))+
+    tmn <- ggplot() + 
+      geom_tile(data = historic, aes(x = x, y = y, fill = tmean))+
       geom_sf(data = country, fill = NA, color = gray(.8)) +
       geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
       coord_sf(xlim = xlims, ylim = ylims) +
-      labs(fill = expression('('*~degree*C*')'), title = expression('Historical Annual Mean Temperature ('*~degree*C*')'),x = 'Longitude', y = 'Latitude') +
-      # scale_fill_brewer(palette="YlOrRd",  labels = labels_t, 
-      # guide = guide_legend(barwidth = 12, label.theme = element_text(angle = 0))) +
+      labs(fill = expression('('*~degree*C*')'), title = expression(atop('Historical Annual','Mean Temperature('*~degree*C*')')),x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient(low = "yellow", high = "red",
-                          guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0)))+
+                          guide = guide_colourbar(barwidth = 12,  
+                                                  label.theme = element_text(angle = 25, size = 14)))+
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom')
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                         legend.title=element_text(size=15), 
+                         legend.spacing = unit(5, units = 'cm'),
+                         legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/H_tmn.png') , width = 8, height = 5.5, dpi = 300)
     
@@ -867,16 +829,6 @@ for(i in 1:length(count_i)){
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
     dev.off()
   }
-  
-  
-  
-  
-  # =---------------------------------------------------------------
-  # Cowsay para radiación. 
-  cowsay::say('all maps', by = 'smallcat')
-  # =----------------------------------------------------------------
-  # Aqui se van a poner los mapas de radiación solar... 
-  
   
   # Observed data for each country... 
   tictoc::tic()
@@ -889,18 +841,6 @@ for(i in 1:length(count_i)){
     dplyr::select(id, x, y, ISO3, Country, climate)
   tictoc::toc()
   
-  
-  # historic <- all_climate %>%
-  #   dplyr::mutate(summary =  purrr::map(.x = climate, .f = function(z){
-  #     z <- z %>% dplyr::mutate(year = lubridate::year(Date), month = lubridate::month(Date),
-  #                         tmean = (tmax + tmin)/2 ) %>%  
-  #       dplyr::group_by(year, month) %>% 
-  #       dplyr::summarise(prec = sum(prec), tmean = mean(tmean)) %>% 
-  #       dplyr::ungroup() %>% dplyr::group_by(month) %>% dplyr::select(-year) %>% 
-  #       dplyr::summarise_all(.funs = function(x){round( mean(x, na.rm = TRUE), 1)}) %>% 
-  #       dplyr::ungroup()})) %>% dplyr::select(-climate) %>% tidyr::unnest() %>% 
-  #   dplyr::group_by( id, x, y, ISO3, Country) %>% 
-  #   dplyr::summarise_all(~mean(.))
   
   historic <-  all_climate %>%
     dplyr::mutate(summary =  purrr::map(.x = climate, .f = function(z){
@@ -917,13 +857,13 @@ for(i in 1:length(count_i)){
   historic <- historic %>% filter(id %in% crd$id)
   
   path <- '//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/'
-  # path <- "D:/OneDrive - CGIAR/Desktop/P_indices_H/Profiles_AA/probando/"
   dir.create(glue::glue('{path}{country}/graphs/{tolower(county)}/maps'),recursive = TRUE)
   # 
   # # graph de clima. 
   Clim_graph(historic)
   
   
+  # =--------------
   if(Big == 'N'){
     past_c <- fst::fst(glue::glue('{path}{country}/past/{county}_1985_2015_corrected.fst')) %>%
       as_tibble() %>%
@@ -978,7 +918,6 @@ for(i in 1:length(count_i)){
     
     
     # Climate Index
-    
     data_all <- dplyr::bind_rows(past_c, future_c) %>% dplyr::select(-x, -y) %>%
       dplyr::inner_join(., all_climate) %>% filter(id %in% crd$id) %>% 
       dplyr::mutate(county = county) %>%
