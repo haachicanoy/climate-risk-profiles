@@ -1,78 +1,51 @@
-# Maps for 
+# Maps for all country. 
 # H. Achicanoy & A. Esquivel
 # Alliance Bioversity-CIAT
-# June - 2020. 
+# Nov - 2020. 
 
-rm(list = ls())
-gc(reset = TRUE)
+rm(list = ls()); gc(reset = TRUE)
 
 # =--------------------
 # Packages 
 options(warn = -1, scipen = 999)
 
 suppressMessages(library(pacman))
-suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate, glue, cowsay, fst, ggspatial, vroom, sp, compiler))
+suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate, glue, cowsay, future, furrr, fst, ggspatial, vroom, sp, compiler))
 # =--------------------
-
 
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Nigeria'
-county <-   c('Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Benue','Borno',
-              'Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT Abuja','Gombe','Imo',
-              'Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos','Nassarawa','Niger',
-              'Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara', 'Bayelsa')
+country <- 'Burkina_Faso'
+county <-   c('Sud-Ouest', 'Haut-Bassins', 'Boucle du Mouhoun', 'Cascades')
 adm_lvl <- 1
-iso3c <- 'NGA'
+iso3c <- 'BFA'
 Big <- 'B'
-
-chain <- TRUE # Este
-# Una cadena a la vez por ahora. 
-value_chain <- 'Wheat' #  Cassava Soybean Maize Cotton Wheat Sesame
-
 
 # =---------------------------------------------------
 # Ruta Principal para guardados: 
 root <- '//dapadfs/workspace_cluster_8/climateriskprofiles/'
 
-# Incertando todo el tema de cadena de valor. 
-if(isTRUE(chain)){
-  vc_tibble <- read.csv(paste0(root, '/NIRSAL/chain.csv')) %>% 
-    as_tibble() %>% 
-    dplyr::select(County, value_chain) 
-  
-  county <- vc_tibble[which(vc_tibble[,2] == 'X'), ] %>% pull(County) %>% as.character()
+# Load county shapefile
+if(country == 'India'){
+  # India 
+  country1 <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
+  shp <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
+  shp <- shp[shp@data$ST_NM %in% county,]
+  plot(shp)
+  shp@data$ISO <- iso3c
 }else{
-  print('All Country')
+  country1 <- readRDS(glue::glue('{root}data/shps/shps_from_R/{country}/gadm36_{iso3c}_{adm_lvl}_sp.rds')) 
+  shp <- readRDS(glue::glue('{root}data/shps/shps_from_R/{country}/gadm36_{iso3c}_{adm_lvl}_sp.rds')) 
+  shp@data$NAME_1 <- iconv(shp@data$NAME_1,from="UTF-8",to="ASCII//TRANSLIT")
+  shp@data$NAME_1 <- case_when(shp@data$NAME_1 == 'Trans Nzoia' ~ 'Trans-Nzoia',
+                               shp@data$NAME_1 == "Murang'a" ~ 'Muranga', 
+                               TRUE ~ shp@data$NAME_1)
+  shp <- shp[shp@data$NAME_1 %in% county,]
+  plot(shp)
+  shp@data$ISO <- iso3c
 }
 
-
-m_coords <- tibble(county = county) %>% 
-  mutate(coords = purrr::map(.x = county, 
-                             .f = function(x){
-                               fst::fst(glue::glue('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/NIRSAL/{country}_{value_chain}/past/{x}_1985_2015_idw.fst')) %>% 
-                                 as.tibble() %>% dplyr::select(id, x, y)})) %>% 
-  unnest(coords)
-
-
-
-# Load county shapefile
-country1 <- raster::shapefile(paste0(root,'/data/shps/',country,'/',iso3c,'_adm',adm_lvl,'.shp'))
-country1@data$Regions_GP <- case_when(country1@data$NAME_1 %in% c("Edo", "Delta", "Bayelsa", "Rivers","Akwa Ibom", "Cross River" ) ~ 'SS',
-                                      country1@data$NAME_1 %in% c("Oyo", "Ogun", "Lagos", "Osun", "Ondo", "Ekiti") ~ 'SW',
-                                      country1@data$NAME_1 %in% c("Anambra", "Enugu", "Ebonyi", "Imo", "Abia") ~ 'SE',
-                                      country1@data$NAME_1 %in% c("Kwara", "Niger", "FCT Abuja", "Kogi", "Nassarawa", "Plateau", "Benue") ~ 'NC',
-                                      country1@data$NAME_1 %in% c("Bauchi", "Gombe", "Yobe", "Borno", "Adamawa", "Taraba") ~ 'NE',
-                                      country1@data$NAME_1 %in% c("Kebbi", "Sokoto", "Zamfara" , "Katsina", "Kano", "Jigawa", "Kaduna") ~ 'NW',
-                                      TRUE ~ country1@data$NAME_1) 
-shp <- raster::shapefile(paste0(root,'/data/shps/',country,'/',iso3c,'_adm',adm_lvl,'.shp'))
-shp <- raster::shapefile(paste0(root,'/data/shps/',country,'/',iso3c,'_adm',adm_lvl,'.shp'))
-glue::glue('shp <- shp[shp@data$NAME_{adm_lvl} %in% county,]') %>%
-  as.character %>%
-  parse(text = .) %>%
-  eval(expr = ., envir = .GlobalEnv)
-plot(shp)
 
 
 # Load id coords
@@ -100,10 +73,6 @@ all_climate <- tibble(county) %>%
       dplyr::select(id, x, y, ISO3, Country, climate)}))  %>% unnest()
 tictoc::toc()
 
-
-all_climate <-  all_climate %>% dplyr::select(-x, -y) %>% inner_join(m_coords, . , by = c('county', 'id')) 
-
-
 # Datos historicos. 
 historic <-  all_climate %>%
   dplyr::mutate(summary =  purrr::map(.x = climate, .f = function(z){
@@ -117,20 +86,26 @@ historic <-  all_climate %>%
   dplyr::group_by( id, x, y, ISO3, Country) %>%
   dplyr::summarise_all(~mean(.))
 
+
 ##  =-----------------------------------------
-Clim_graph <- function(historic, value_chain = NULL){
+Clim_graph <- function(historic){
   ISO3 <- unique(historic$ISO3); 
   Country <- unique(historic$Country)
   
   shp_sf <- shp  %>% sf::st_as_sf()
   country <- country1 %>% sf::st_as_sf()
-  country_2 <- country %>% group_by(Regions_GP) %>% summarize()
   xlims <- sf::st_bbox(shp_sf)[c(1, 3)]
   ylims <- sf::st_bbox(shp_sf)[c(2, 4)]
   
-  #### Voy por aqui. 
-  Country <- ifelse(!is.null(value_chain), glue::glue('{Country}_{value_chain}'))
-  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/NIRSAL/{Country}/graphs/maps/')
+  
+  limx <- sf::st_bbox(country)[c(1, 3)]
+  limy <- sf::st_bbox(country)[c(2, 4)]
+  
+  map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>% 
+    sf::st_as_sf()
+  
+  #### folders.  
+  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_countrys_maps/index/{Country}/')
   if(!dir.exists(path)){dir.create(path, recursive = TRUE)}else{print('ok')}
   # =--------------------------------------------------------
   historic <- historic %>% replace_na(list(z = mean)) %>% 
@@ -141,84 +116,72 @@ Clim_graph <- function(historic, value_chain = NULL){
   af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
     mutate( name = shp_sf$NAME_1) %>%
     mutate(Initals = substr(name, start = 1, stop = 3))
-  # geom_text(data = af, aes(X, Y, label = Initals), colour ='black')
-  
-  af_1 <- as_tibble(st_centroid(country_2) %>% st_coordinates()) %>%
-    mutate(Initals = country_2$Regions_GP) %>% 
-    filter(Initals != 'Water body')
   
   # =-------------------------------------------------------------------------------
   pais <- ggplot() +
+    geom_sf(data = map_world, fill = NA, color = gray(.8)) +  
+    geom_sf(data = country, fill = 'lightgray', color = gray(.1), alpha = 0.2) +
     geom_sf(data = shp_sf, aes(fill = NAME_1), color = gray(.8), alpha = 0.8) +
-    geom_sf(data = country_2, fill = NA, color = gray(.1)) +
     theme_bw() +
-    # labs(title = country) +
     labs(x = NULL, y = NULL, fill = 'County') +
+    geom_sf_label(data = map_world, aes(label = NAME), colour ='lightgray') +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
-    geom_text(data = af_1, aes(X, Y, label = Initals), colour ='lightgray') +
-    # coord_sf(xlim = xlims, ylim = ylims) +
-    # scale_fill_brewer('County',palette="Spectral") +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          axis.text.x = element_blank(), axis.text.y = element_blank(),
-          plot.title = element_text(hjust = 0.5, size = 7, face = "bold"))
+    coord_sf(xlim = limx, ylim = limy) +
+    scale_fill_brewer('County',palette="Spectral") +
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.text = element_text(size=15),
+          legend.title=element_text(size=15))  + guides(fill = guide_legend(ncol = 3))
   
-  # pais + labs(subtitle = glue::glue('{NULL}'))
-  
-  ggsave(glue::glue('{path}/Country.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/Country.png') , width = 10, height = 5.5)
   
   
   
   # =--------------------------------------------------------
-  historic <- historic %>% dplyr::select(-x, -y, -county ) %>% inner_join(m_coords)
-  # =--------------------------------------------------------
   
-  graph <-  historic[historic$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = prec ))
-  for(i in 2:length(county) ){
-    graph <- graph + geom_tile(data = historic[historic$county%in% county[i],] , aes(x = x, y = y, fill = prec )) 
-  }
-  
-  prec <- graph   +
-    geom_sf(data = country_2, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.5)) +
+  prec <- ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_tile(data = historic, aes(x = x, y = y, fill = prec )) +
+    geom_sf(data = country, fill = NA, color = gray(.8)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
     coord_sf(xlim = xlims, ylim = ylims) +
-    geom_text(data = af_1, aes(X, Y, label = Initals), colour ='black') +
-    labs(fill = glue::glue('(mm)  '), title = 'Historical Annual Mean Precipitation (mm/year)',x = 'Longitude', y = 'Latitude') +
+    labs(fill = glue::glue('(mm)'), title = 'Historical Annual\nMean Precipitation (mm/year)',x = 'Longitude', y = 'Latitude') +
+    geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
     scale_fill_gradientn(colours = blues9, 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, 
+                                                 label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-    theme_bw() + theme(legend.position = 'bottom')
-  
+    theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                       legend.title=element_text(size=15), 
+                       legend.spacing = unit(5, units = 'cm'),
+                       legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
   
   ggsave(glue::glue('{path}/H_prec.png') , width = 8, height = 5.5, dpi = 300)
   
   ##########################################################
   
-  
-  graph <-  historic[historic$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = tmean ))
-  for(i in 2:length(county) ){
-    graph <- graph + geom_tile(data = historic[historic$county%in% county[i],] , aes(x = x, y = y, fill = tmean )) 
-  }
-  
-  
-  tmn <- graph +
-    geom_sf(data = country_2, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.5)) +
+  tmn <-  ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_tile(data = historic, aes(x = x, y = y, fill = tmean))+
+    geom_sf(data = country, fill = NA, color = gray(.8)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
     coord_sf(xlim = xlims, ylim = ylims) +
-    geom_text(data = af_1, aes(X, Y, label = Initals), colour ='black') +
-    labs(fill = expression('('*~degree*C*')'), title = expression('Historical Annual Mean Temperature ('*~degree*C*')'),x = 'Longitude', y = 'Latitude') +
+    labs(fill = expression('('*~degree*C*')'), title = expression(atop('Historical Annual','Mean Temperature('*~degree*C*')')),x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient(low = "yellow", high = "red",
-                        guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0)))+
+                        guide = guide_colourbar(barwidth = 12,  
+                                                label.theme = element_text(angle = 25, size = 15)))+
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-    theme_bw() + theme(legend.position = 'bottom')
+    geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
+    theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                       legend.title=element_text(size=15), 
+                       legend.spacing = unit(5, units = 'cm'),
+                       legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
   
   ggsave(glue::glue('{path}/H_tmn.png') , width = 8, height = 5.5, dpi = 300)
   
   
-  png(filename = glue::glue('{path}/A_Multi_Anual.png'), width = 1580, height = 720)
+  png(filename = glue::glue('{path}A_Multi_Anual.png'), width=15.5,height=6.5,units="in", res = 300)
   print(gridExtra::grid.arrange(prec, tmn, ncol=2,
-                                top = glue::glue('{Country}',
+                                top = glue::glue('{Country}, {county}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -228,21 +191,18 @@ Clim_graph <- function(historic, value_chain = NULL){
 # =---------------------------------
 # =---------------------------------
 # graph de clima. 
-Clim_graph(historic, value_chain= value_chain)
+Clim_graph(historic)
 
 
 # =-------------------------------------
 
 do_clim_country <- function(data_split){
-  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/NIRSAL/{country}_{value_chain}')
-  ISO3 <- unique(data_split$ISO3);# county <- unique(data_split$county)
-  # time <- unique(data_split$time);
+  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_countrys_maps/index/{Country}')
+  
+  ISO3 <- unique(data_split$ISO3); county <- unique(data_split$county)
   semester <-  unique(data_split$semester) ;  Country <- unique(data_split$Country)
   
-  #### Voy por aqui. 
-  Country <- ifelse(!is.null(value_chain), glue::glue('{country}_{value_chain}'))
-  
-  if(dir.exists(glue::glue('{path}/graphs/maps/'))==FALSE){dir.create(glue::glue('{path}/graphs/maps/'))}else{print('ok')}
+  if(dir.exists(glue::glue('{path}/maps/'))==FALSE){dir.create(glue::glue('{path}/maps/'))}else{print('ok')}
   
   # Conditions...
   if(Big =='N'){
@@ -273,16 +233,16 @@ do_clim_country <- function(data_split){
   
   # Aqui se hace solo la figura base...
   shp_sf <- shp  %>% sf::st_as_sf()
-  country <- country1 %>% sf::st_as_sf() %>% group_by(Regions_GP) %>% summarize()
+  country <- country1 %>% sf::st_as_sf()
   xlims <- sf::st_bbox(shp_sf)[c(1, 3)]
   ylims <- sf::st_bbox(shp_sf)[c(2, 4)]
   
-  
+  map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>% 
+    sf::st_as_sf()
   #===---------------------------------------------------------
   #=------------------------------------------------------------
   af <- as_tibble(st_centroid(country) %>% st_coordinates()) %>%
-    mutate(Initals = country$Regions_GP) %>% 
-    filter(Initals != 'Water body')
+    mutate(Initals = country$NAME_1) 
   
   #===---------------------------------------------------------
   #=------------------------------------------------------------
@@ -295,18 +255,22 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD )) 
   }
-  a <- graph +
+  # a <-
+  graph +
     geom_sf(data = country, fill = NA, color = gray(.1)) +
     # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+  #  aes(colour = NAME_1)
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
     scale_fill_viridis_c(limits = c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, 
+                                                 label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-    theme_bw() +
-    theme(legend.position = 'bottom')
+    theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                       legend.title=element_text(size=15), 
+                       legend.spacing = unit(5, units = 'cm'),
+                       legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
   
   ggsave(glue::glue('{path}/graphs/maps/{index_a}_past_S{semester}.png') , width = 8, height = 5.5)
@@ -1005,24 +969,39 @@ do_srad_country <- function(data_split){
 # =--------------------------------------
 # =-------------------------------------
 
-# Optimization. 
+# Optimization in reading data. 
 ag <- all_climate %>% dplyr::select(-climate) %>% 
   nest(-county) %>% 
   group_split(county)
 
-# county <- ag$county
-
-tag <- ag %>% 
-  purrr::map(.f = function(z){
-    
-    # glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/NIRSAL/{Country}_{value_chain}')
-    path <- '//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/NIRSAL/'
+if(Big == 'N'){
+  tag <- ag %>% purrr::map(.f = function(z){
+    path <- glue::glue('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/{country}')
     # Si... se tienen los idw. 
-    past_c <- fst::fst(glue::glue('{path}/{country}_{value_chain}/past/{z$county}_1985_2015_idw.fst')) %>%
+    past_c <- fst::fst(glue::glue('{path}/past/{z$county}_1985_2015_corrected.fst')) %>%
       as_tibble() %>% 
       dplyr::mutate(time = 'past') 
     
-    futDir  <- paste0(path,country, '_', value_chain,'/future')
+    futDir  <-  paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
+    fut_fls <- list.files(futDir, pattern = paste0('^',z$county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_corrected.fst'), recursive = T)
+    fut_fls <- paste0(futDir,'/',fut_fls)  
+    
+    future_c  <- fut_fls %>%
+      purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% dplyr::mutate(time = 'future'); return(df)}) %>%
+      dplyr::bind_rows()
+    
+    data_c <- bind_rows(past_c, future_c) %>% dplyr::select(-x, -y)
+    return(data_c)  }) %>% 
+    purrr::map(.f = nest) 
+}else if(Big == 'B'){
+  tag <- ag %>% purrr::map(.f = function(z){
+    path <- glue::glue('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/{country}')
+    # Si... se tienen los idw. 
+    past_c <- fst::fst(glue::glue('{path}/past/{z$county}_1985_2015_idw.fst')) %>%
+      as_tibble() %>% 
+      dplyr::mutate(time = 'past') 
+    
+    futDir  <-  paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
     fut_fls <- list.files(futDir, pattern = paste0('^',z$county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_idw.fst'), recursive = T)
     fut_fls <- paste0(futDir,'/',fut_fls)  
     
@@ -1030,10 +1009,11 @@ tag <- ag %>%
       purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% dplyr::mutate(time = 'future'); return(df)}) %>%
       dplyr::bind_rows()
     
-    
     data_c <- bind_rows(past_c, future_c) %>% dplyr::select(-x, -y)
     return(data_c)  }) %>% 
-  purrr::map(.f = nest) 
+    purrr::map(.f = nest) 
+}
+
 
 data_for_graphs <- list()
 for(i in 1:length(ag)){
@@ -1043,11 +1023,7 @@ for(i in 1:length(ag)){
 data_for_graphs <- bind_rows(data_for_graphs) %>% rename(data_graph = 'data1') %>% unnest(data) %>% 
   nest(id, x, y, ISO3, Country) 
 
-
-# =----- 
-library(future)
-library(furrr)
-
+# =------------------------------------------------------------------------------------------------
 # Puedo leer esto en paralelo, para que no haya problema... 
 cores <- 5
 plan(cluster, workers = cores)
@@ -1069,12 +1045,10 @@ data_all <- probando %>%
 
 data_all %>% purrr::walk(.f = do_clim_country)
 # =--------------------------------------
-# =-------------------------------------
-
+# =--------------------------------------
 
 # Srad index....
-index_complete <- probando %>% 
-  dplyr::select(id, ISO3, county, Country, x, y, time, gSeason, SLGP,LGP) %>% 
+index_complete <- probando %>% dplyr::select(id, ISO3, county, Country, x, y, time, gSeason, SLGP,LGP) %>% 
   mutate(Big = 'B')
 
 
