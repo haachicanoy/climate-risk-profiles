@@ -16,7 +16,7 @@ suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate,
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Burkina_Faso'
+country <- 'Burkina_Faso'; country <- country
 county <-   c('Sud-Ouest', 'Haut-Bassins', 'Boucle du Mouhoun', 'Cascades')
 adm_lvl <- 1
 iso3c <- 'BFA'
@@ -62,7 +62,6 @@ crd <<- crd
 
 
 # Lectura de datos...
-
 # Observed data for each country... 
 tictoc::tic()
 all_climate <- tibble(county) %>% 
@@ -196,12 +195,11 @@ Clim_graph(historic)
 
 # =-------------------------------------
 
-do_clim_country <- function(data_split){
-  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_countrys_maps/index/{Country}')
+do_clim_Country <- function(data_split){
   
-  ISO3 <- unique(data_split$ISO3); county <- unique(data_split$county)
+  ISO3 <- unique(data_split$ISO3) #; # county <- unique(data_split$county)
   semester <-  unique(data_split$semester) ;  Country <- unique(data_split$Country)
-  
+  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_Countrys_maps/index/{Country}')
   if(dir.exists(glue::glue('{path}/maps/'))==FALSE){dir.create(glue::glue('{path}/maps/'))}else{print('ok')}
   
   # Conditions...
@@ -233,16 +231,17 @@ do_clim_country <- function(data_split){
   
   # Aqui se hace solo la figura base...
   shp_sf <- shp  %>% sf::st_as_sf()
-  country <- country1 %>% sf::st_as_sf()
+  Country <- country1 %>% sf::st_as_sf()
   xlims <- sf::st_bbox(shp_sf)[c(1, 3)]
   ylims <- sf::st_bbox(shp_sf)[c(2, 4)]
   
-  map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>% 
+  map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_Country/all_countries.shp')) %>% 
     sf::st_as_sf()
   #===---------------------------------------------------------
   #=------------------------------------------------------------
-  af <- as_tibble(st_centroid(country) %>% st_coordinates()) %>%
-    mutate(Initals = country$NAME_1) 
+  af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+    mutate(Initals = shp_sf$NAME_1) %>% 
+    mutate(Initals = substr(Initals, start = 1, stop = 3))
   
   #===---------------------------------------------------------
   #=------------------------------------------------------------
@@ -255,10 +254,8 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD )) 
   }
-  # a <-
-  graph +
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+  #  aes(colour = NAME_1)
+  a <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
@@ -273,7 +270,7 @@ do_clim_country <- function(data_split){
                        legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
   
-  ggsave(glue::glue('{path}/graphs/maps/{index_a}_past_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_a}_past_S{semester}.png') , width = 8, height = 5.5)
   
   
   # =- Lo mismo para futuro...
@@ -281,20 +278,23 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD_f )) 
   }
-  a1 <- graph +
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  a1 <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days)'), title = 'Future',x = 'Longitude', y = 'Latitude') +
     scale_fill_viridis_c(limits = c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, 
+                                                 label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps/{index_a}_future_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_a}_future_S{semester}.png') , width = 8, height = 5.5)
   
   
   # =- 
@@ -302,24 +302,26 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD_c )) 
   }
-  a_d <- graph+
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  a_d <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days) '), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps/Dif_{index_a}_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/Dif_{index_a}_S{semester}.png') , width = 8, height = 5.5)
   
   
   
-  png(filename = glue::glue('{path}/graphs/maps/Dif_{index_a}_{semester}.png') , width = 1580, height = 720)
+  png(filename = glue::glue('{path}/maps/Dif_{index_a}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(a, a1, a_d, ncol=3,  
                                 top = glue::glue('{Country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -337,65 +339,73 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P5D )) 
   }
-  c <- graph +
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  c <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_c}\n(mm) '), title = 'Historic',x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradientn(colours = blues9, limits = c(round(limits$P5D_min, 2)- 0.1, 
-                                                      round(limits$P5D_max, 2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
+    scale_fill_viridis_c(limits = c(round(limits$P5D_min, 2)- 0.1, 
+                                    round(limits$P5D_max, 2)+0.1), 
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_c}_past_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_c}_past_S{semester}.png') , width = 8, height = 5.5)
   
   # =- Futuro.
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P5D_f ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P5D_f )) 
   }
-  c1 <- graph +
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
+  c1 <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_c}\n(mm)'), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradientn(colours = blues9, limits = c(round(limits$P5D_min, 2)- 0.1, 
-                                                      round(limits$P5D_max, 2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+    scale_fill_viridis_c(limits = c(round(limits$P5D_min, 2)- 0.1, 
+                                    round(limits$P5D_max, 2)+0.1), 
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_c}_future_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_c}_future_S{semester}.png') , width = 8, height = 5.5)
   
   # =----
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P5D_c ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P5D_c )) 
   }
-  c_d <- graph +
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
+  c_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_c}\n(mm) '), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, 
+                                                 label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//Dif_{index_c}_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/Dif_{index_c}_S{semester}.png') , width = 8, height = 5.5)
   
   
-  png(filename = glue::glue('{path}/graphs/maps//Dif_{index_c}_{semester}.png') , width = 1580, height = 720)
+  png(filename = glue::glue('{path}/maps//Dif_{index_c}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(c, c1, c_d, ncol=3,  
                                 top = glue::glue('{Country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -413,42 +423,46 @@ do_clim_country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P95 )) 
   }
   
-  d <- graph +
-    geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  d <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_d}\n(mm)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradientn(colours = blues9, limits = c(round(limits$P95_min,2)-0.1, 
-                                                      round(limits$P95_max, 2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+    scale_fill_viridis_c(limits = c(round(limits$P95_min,2)-0.1, 
+                                    round(limits$P95_max, 2)+0.1), 
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_d}_past_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_d}_past_S{semester}.png') , width = 8, height = 5.5)
   
   # =----
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P95_f ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P95_f )) 
   }
-  d1 <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  d1 <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_d}\n(mm) '), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradientn(colours = blues9, limits = c(round(limits$P95_min,2)-0.1, 
-                                                      round(limits$P95_max, 2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
+    scale_fill_viridis_c(limits =  c(round(limits$P95_min,2)-0.1, 
+                                     round(limits$P95_max, 2)+0.1), 
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_d}_future_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_d}_future_S{semester}.png') , width = 8, height = 5.5)
   
   
   # =----
@@ -456,23 +470,25 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P95_c )) 
   }
-  d_d <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  d_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_d}\n(mm) '), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//Dif_{index_d}_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/Dif_{index_d}_S{semester}.png') , width = 8, height = 5.5)
   
   
   
-  png(filename = glue::glue('{path}/graphs/maps//Dif_{index_d}_{semester}.png') , width = 1580, height = 720)
+  png(filename = glue::glue('{path}/maps/Dif_{index_d}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(d, d1, d_d, ncol=3,  
                                 top = glue::glue('{Country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -482,8 +498,6 @@ do_clim_country <- function(data_split){
   
   #===---------------------------------------------------------
   #=------------------------------------------------------------
-  
-  # =------------
   index_e <- 'NT35'
   
   # =----
@@ -491,19 +505,21 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = NT35 )) 
   }
-  e <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  e <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_e}\n(days)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
     scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_e}_past_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_e}_past_S{semester}.png') , width = 8, height = 5.5)
   
   # =------------
   # =----
@@ -511,19 +527,22 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = NT35_f )) 
   }
-  e1 <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  e1 <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_e}\n(days)'), title = 'Future', x = 'Longitude', y = 'Latitude') +
     scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
   
   
   # =----
@@ -531,35 +550,33 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = NT35_c )) 
   }
-  e_d <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+  e_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_e}\n(days)'), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//Dif_{index_e}_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/Dif_{index_e}_S{semester}.png') , width = 8, height = 5.5)
   
   
-  png(filename = glue::glue('{path}/graphs/maps//Dif_{index_e}_{semester}.png') , width = 1580, height = 720)
+  png(filename = glue::glue('{path}/maps/Dif_{index_e}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(e, e1, e_d, ncol=3,  
                                 top = glue::glue('{Country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
   
-  
-  
-  
   #===---------------------------------------------------------
   #=------------------------------------------------------------
-  cowsay::say('here')
-  # =------------
   index_f <- 'ndws'
   
   # =----
@@ -568,39 +585,45 @@ do_clim_country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = ndws )) 
   }
   
-  f <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
     scale_fill_viridis_c(limits = c(round(limits$ndws_min, 2), round(limits$ndws_max, 2)), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, 
+                                                 label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-    theme_bw() + theme(legend.position = 'bottom')
+    theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                       legend.title=element_text(size=15), 
+                       legend.spacing = unit(5, units = 'cm'),
+                       legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_f}_past_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_f}_past_S{semester}.png') , width = 8, height = 5.5)
   
   # =------------
-  # =----
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = ndws_f ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = ndws_f )) 
   }
   
-  f1 <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  f1 <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
     scale_fill_viridis_c(limits = c(round(limits$ndws_min, 2), round(limits$ndws_max, 2)), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
   
   
   # =----
@@ -608,22 +631,25 @@ do_clim_country <- function(data_split){
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = ndws_c )) 
   }
-  f_d <- graph + geom_sf(data = country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  f_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = Country, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black')+ 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//Dif_{index_f}_S{semester}.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/Dif_{index_f}_S{semester}.png') , width = 8, height = 5.5)
   
   
-  png(filename = glue::glue('{path}/graphs/maps//Dif_{index_f}_{semester}.png') , width=12.5,height=4.5,units="in", res = 300)
+  png(filename = glue::glue('{path}/maps/Dif_{index_f}_{semester}.png') , width=12.5,height=4.5,units="in", res = 300)
   print(gridExtra::grid.arrange(f, f1, f_d, ncol=3,  
                                 top = glue::glue('{Country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -638,24 +664,29 @@ do_clim_country <- function(data_split){
 # Funcion for run basic maps. 
 
 do_srad_country <- function(data_split){
-  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/NIRSAL/{country}_{value_chain}')
-  ISO3 <- unique(data_split$ISO3); #county <- unique(data_split$county) 
-  Country <- ifelse(!is.null(value_chain), glue::glue('{country}_{value_chain}'))
+  
+  ISO3 <- unique(data_split$ISO3) ; county <- unique(data_split$county)
+  Country <- unique(data_split$Country)
+  path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_Countrys_maps/index/{Country}')
+  if(dir.exists(glue::glue('{path}/maps/'))==FALSE){dir.create(glue::glue('{path}/maps/'))}else{print('ok')}
   Big <- unique(data_split$Big)
   
+  
+  #===---------------------------------------------------------
+  #=------------------------------------------------------------
   # Aqui se hace solo la figura base...
   shp_sf <- shp  %>% sf::st_as_sf()
-  pais <- country1 %>% sf::st_as_sf() %>% group_by(Regions_GP) %>% summarize()
+  pais <- country1 %>% sf::st_as_sf()
   xlims <- sf::st_bbox(shp_sf)[c(1, 3)]
   ylims <- sf::st_bbox(shp_sf)[c(2, 4)]
   
-  #### Voy por aqui. 
-  Country <- ifelse(!is.null(value_chain), glue::glue('{Country}_{value_chain}'))
+  map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>%
+    sf::st_as_sf()
   
   # Texto... 
-  af <- as_tibble(st_centroid(pais) %>% st_coordinates()) %>%
-    mutate(Initals = pais$Regions_GP) %>% 
-    filter(Initals != 'Water body')
+  af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+    mutate(Initals = shp_sf$NAME_1) %>% 
+    mutate(Initals = substr(Initals, start = 1, stop = 3))
   
   if(Big =='N'){
     # =----------------------------------------------------------------------
@@ -677,7 +708,7 @@ do_srad_country <- function(data_split){
   }else if(Big == 'B'){
     # =----------------------------------------------------------------------
     # gSeason...
-    gSeason_i <- data_split %>% dplyr::select( time, x, y, gSeason) %>%
+    gSeason_i <- data_split %>% dplyr::select(time, x, y, gSeason) %>%
       group_by( time, x, y) %>% summarise(gSeason = max(gSeason, na.rm =  TRUE)) %>%
       ungroup() %>% group_by(time, x, y) %>%
       summarise(gSeason = round(mean(gSeason, na.rm = TRUE), 0)) %>% ungroup()
@@ -699,28 +730,31 @@ do_srad_country <- function(data_split){
   limits_gs <- dplyr::select(gSeason_i, gSeason) %>% summarise_all(.funs = c('min', 'max'))
   
   # # Primero dejaré hechos los de presente... luego repito los de futuro...
+  m_coords <- data_split %>% dplyr::select(id, county,  x, y) %>% unique()
   
   median_data <- inner_join(filter(gSeason_i, time == 'past'), m_coords)
-  graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = gSeason ))
+  graph <-  median_data[median_data$county %in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = gSeason ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = gSeason )) 
   }
   
-  
-  gs <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  gs <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = pais, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('gSeason\n(day)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradientn(colours = blues9, limits = as.integer(limits_gs), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+    scale_fill_viridis_c(limits = as.integer(limits_gs), 
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
   
-  ggsave(glue::glue('{path}/graphs/maps//gSeason_past.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/gSeason_past.png') , width = 8, height = 5.5)
   
   # # =- Futuro.
   median_data <- inner_join(filter(gSeason_i, time == 'future'), m_coords)
@@ -729,19 +763,22 @@ do_srad_country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = gSeason )) 
   }
   
-  gs_f <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  gs_f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = pais, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('gSeason\n(day)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradientn(colours = blues9, limits = as.integer(limits_gs), 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+    scale_fill_viridis_c(limits = as.integer(limits_gs), 
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//gSeason_future.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/gSeason_future.png') , width = 8, height = 5.5)
   
   # =--------
   gSeason_dif <- gSeason_i %>%
@@ -754,22 +791,25 @@ do_srad_country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = gSeason )) 
   }
   
-  c <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  c <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = pais, fill = NA, color = gray(.1)) +
     geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('gSeason\n(days)'), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                         guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom', text = element_text(size=15), 
+          legend.title=element_text(size=15), 
+          legend.spacing = unit(5, units = 'cm'),
+          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
   
-  ggsave(glue::glue('{path}/graphs/maps//Dif_gSeason.png') , width = 8, height = 5.5)
+  ggsave(glue::glue('{path}/maps/Dif_gSeason.png') , width = 8, height = 5.5)
   
   
-  png(filename = glue::glue('{path}/graphs/maps//all_gSeason.png') , width = 1580, height = 720)
+  png(filename = glue::glue('{path}/maps/all_gSeason.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(gs, gs_f, c, ncol=3,  
                                 top = glue::glue('{Country}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -801,21 +841,24 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = SLGP)) 
     }
     
-    SLGP_p_1 <-graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-      # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+    SLGP_p_1 <-graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = pais, fill = NA, color = gray(.1)) +
       geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('SLGP\n(Day of\nthe year)  '), 
            title = glue::glue('gSeason = {i}; Historic'),
            x = 'Longitude', y = 'Latitude') +
-      scale_fill_gradientn(colours = blues9, limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+      scale_fill_viridis_c(limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
+                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom', text = element_text(size=15), 
+            legend.title=element_text(size=15), 
+            legend.spacing = unit(5, units = 'cm'),
+            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
     
-    ggsave(glue::glue('{path}/graphs/maps//SLGP_past_{i}.png') , width = 8, height = 4)
+    ggsave(glue::glue('{path}/maps/SLGP_past_{i}.png') , width = 8, height = 4)
     
     # =----
     median_data <- inner_join(filter(two_index %>% mutate(gSeason = glue::glue('gSeason = {gSeason}')),
@@ -825,21 +868,24 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = SLGP)) 
     }
     
-    SLGP_f_1 <-graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-      # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+    SLGP_f_1 <-graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = pais, fill = NA, color = gray(.1)) +
       geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('SLGP\n(Day of\nthe year)  '), 
            title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
-      scale_fill_gradientn(colours = blues9, limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+      scale_fill_viridis_c(limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
+                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom', text = element_text(size=15), 
+            legend.title=element_text(size=15), 
+            legend.spacing = unit(5, units = 'cm'),
+            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
     
     
-    ggsave(glue::glue('{path}/graphs/maps//SLGP_future_{i}.png') , width = 8, height = 4)
+    ggsave(glue::glue('{path}/maps/SLGP_future_{i}.png') , width = 8, height = 4)
     
     # =----
     median_data <- inner_join(filter(SLGP_dif, gSeason == glue::glue('gSeason = {i}')), m_coords)
@@ -848,23 +894,25 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = SLGP)) 
     }
     
-    d <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-      # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+    d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = pais, fill = NA, color = gray(.1)) +
       geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('SLGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
-      scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
+                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +      scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom', text = element_text(size=15), 
+            legend.title=element_text(size=15), 
+            legend.spacing = unit(5, units = 'cm'),
+            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
     
-    ggsave(glue::glue('{path}/graphs/maps//Dif_SLGP_{i}.png') , width = 8, height = 4)
+    ggsave(glue::glue('{path}/maps/Dif_SLGP_{i}.png') , width = 8, height = 4)
     
     
-    png(filename = glue::glue('{path}/graphs/maps//all_SLGP_{i}.png') , width = 1580, height = 720)
+    png(filename = glue::glue('{path}/maps/all_SLGP_{i}.png') , width = 1580, height = 720)
     print(gridExtra::grid.arrange(SLGP_p_1, SLGP_f_1, d, ncol=3,  
                                   top = glue::glue('{Country}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -888,20 +936,23 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = LGP)) 
     }
     
-    LGP_p <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-      # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+    LGP_p <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = pais, fill = NA, color = gray(.1)) +
       geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('LGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Historic'),x = 'Longitude', y = 'Latitude') +
-      scale_fill_gradientn(colours = blues9, limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+      scale_fill_viridis_c(limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
+                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom', text = element_text(size=15), 
+            legend.title=element_text(size=15), 
+            legend.spacing = unit(5, units = 'cm'),
+            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
     
-    ggsave(glue::glue('{path}/graphs/maps//LGP_past_{i}.png') , width = 8, height = 4)
+    ggsave(glue::glue('{path}/maps/LGP_past_{i}.png') , width = 8, height = 4)
     
     # =------
     median_data <- inner_join(filter(two_index %>% mutate(gSeason = glue::glue('gSeason = {gSeason}')),
@@ -911,20 +962,23 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = LGP)) 
     }
     
-    LGP_f <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-      # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+    LGP_f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = pais, fill = NA, color = gray(.1)) +
       geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('LGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
-      scale_fill_gradientn(colours = blues9, limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+      scale_fill_viridis_c(limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
+                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom', text = element_text(size=15), 
+            legend.title=element_text(size=15), 
+            legend.spacing = unit(5, units = 'cm'),
+            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
     
-    ggsave(glue::glue('{path}/graphs/maps//LGP_future_{i}.png') , width = 8, height = 4)
+    ggsave(glue::glue('{path}/maps/LGP_future_{i}.png') , width = 8, height = 4)
     
     # =------
     median_data <- inner_join(filter(LGP_dif, gSeason == glue::glue('gSeason = {i}')) , m_coords)
@@ -933,22 +987,25 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = LGP)) 
     }
     
-    e <- graph + geom_sf(data = pais, fill = NA, color = gray(.1)) +
-      # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+    e <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = pais, fill = NA, color = gray(.1)) +
       geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('LGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 0))) +
+                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom', text = element_text(size=15), 
+            legend.title=element_text(size=15), 
+            legend.spacing = unit(5, units = 'cm'),
+            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
     
-    ggsave(glue::glue('{path}/graphs/maps//Dif_LGP_{i}.png') , width = 8, height = 4)
+    ggsave(glue::glue('{path}/maps/Dif_LGP_{i}.png') , width = 8, height = 4)
     
-    png(filename = glue::glue('{path}/graphs/maps//all_LGP_{i}.png') , width = 1580, height = 720)
+    png(filename = glue::glue('{path}/maps/all_LGP_{i}.png') , width = 1580, height = 720)
     print(gridExtra::grid.arrange(LGP_p, LGP_f, e, ncol=3,  
                                   top = glue::glue('{Country}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -958,9 +1015,6 @@ do_srad_country <- function(data_split){
   
   
 }
-
-
-
 
 
 
@@ -1043,7 +1097,7 @@ data_all <- probando %>%
 
 # =--------------------------------------
 
-data_all %>% purrr::walk(.f = do_clim_country)
+data_all %>% purrr::walk(.f = do_clim_Country)
 # =--------------------------------------
 # =--------------------------------------
 
@@ -1051,7 +1105,5 @@ data_all %>% purrr::walk(.f = do_clim_country)
 index_complete <- probando %>% dplyr::select(id, ISO3, county, Country, x, y, time, gSeason, SLGP,LGP) %>% 
   mutate(Big = 'B')
 
-
 # =-----------------------
-
 do_srad_country(data_split = index_complete)
