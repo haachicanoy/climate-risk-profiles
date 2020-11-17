@@ -16,7 +16,7 @@ suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate,
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Burkina_Faso'; country <- country
+country <- 'Burkina_Faso';
 county <-   c('Sud-Ouest', 'Haut-Bassins', 'Boucle du Mouhoun', 'Cascades')
 adm_lvl <- 1
 iso3c <- 'BFA'
@@ -180,7 +180,7 @@ Clim_graph <- function(historic){
   
   png(filename = glue::glue('{path}A_Multi_Anual.png'), width=15.5,height=6.5,units="in", res = 300)
   print(gridExtra::grid.arrange(prec, tmn, ncol=2,
-                                top = glue::glue('{Country}, {county}',
+                                top = glue::glue('{Country}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -323,7 +323,7 @@ do_clim_Country <- function(data_split){
   
   png(filename = glue::glue('{path}/maps/Dif_{index_a}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(a, a1, a_d, ncol=3,  
-                                top = glue::glue('{Country}\nS:{semester}',
+                                top = glue::glue('{country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -407,7 +407,7 @@ do_clim_Country <- function(data_split){
   
   png(filename = glue::glue('{path}/maps//Dif_{index_c}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(c, c1, c_d, ncol=3,  
-                                top = glue::glue('{Country}\nS:{semester}',
+                                top = glue::glue('{country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -490,7 +490,7 @@ do_clim_Country <- function(data_split){
   
   png(filename = glue::glue('{path}/maps/Dif_{index_d}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(d, d1, d_d, ncol=3,  
-                                top = glue::glue('{Country}\nS:{semester}',
+                                top = glue::glue('{country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -570,7 +570,7 @@ do_clim_Country <- function(data_split){
   
   png(filename = glue::glue('{path}/maps/Dif_{index_e}_{semester}.png') , width = 1580, height = 720)
   print(gridExtra::grid.arrange(e, e1, e_d, ncol=3,  
-                                top = glue::glue('{Country}\nS:{semester}',
+                                top = glue::glue('{country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -651,7 +651,7 @@ do_clim_Country <- function(data_split){
   
   png(filename = glue::glue('{path}/maps/Dif_{index_f}_{semester}.png') , width=12.5,height=4.5,units="in", res = 300)
   print(gridExtra::grid.arrange(f, f1, f_d, ncol=3,  
-                                top = glue::glue('{Country}\nS:{semester}',
+                                top = glue::glue('{country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
   dev.off()
   
@@ -670,7 +670,6 @@ do_srad_country <- function(data_split){
   path <- glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/all_Countrys_maps/index/{Country}')
   if(dir.exists(glue::glue('{path}/maps/'))==FALSE){dir.create(glue::glue('{path}/maps/'))}else{print('ok')}
   Big <- unique(data_split$Big)
-  
   
   #===---------------------------------------------------------
   #=------------------------------------------------------------
