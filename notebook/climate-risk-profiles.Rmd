@@ -1,28 +1,138 @@
 ---
-title: "Climate Risk Profiles methodology"
-output: html_notebook
+title: "Climate Risk Profiles methodology and results"
+subtitle : "Country: Burkina_Faso"
+output:
+  html_document:
+  df_print: paged
+  pdf_document: default
+editor_options: 
+  chunk_output_type: console
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
-```{r, echo = T}
-options(warn = -1, scipen = 999)
-suppressMessages(library(pacman))
-suppressMessages(pacman::p_load(tidyverse))
-setwd('D:/ToBackup/repositories/cc-repo/GIZ-climate-hazards/climate_scripts')
-source('07_graphs_do_climatology.R')
-ls()
-do_climatology(country = 'Senegal',
-               county  = 'Kaffrine',
-               seasons = FALSE, # Should be FALSE
-               manual  = NULL,  # Should be NULL
-               auto    = NULL)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+```{r, include=FALSE}
+options(warn = -1, scipen = 999)
+suppressMessages(library(pacman))
+suppressMessages(pacman::p_load(tidyverse, dplyr,raster, sp, glue, imager))
+setwd('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/notebook/')
+root <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/'
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+<!--Explicacion metodologica, aqui hay que tener en cuenta o planear un poco mejor, que se busca en esta parte, por ahora he puesto, solo la vizaulización de los resultados, pero debo de mejorar esta parte, ya que como dije, necestio tener clara la estructura y exportar mis diagramas o tutoriales. 
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+Otra cosa que debo tener en cuenta, es que se pueden correr una o dos temporadas, entonces eso lo debo dejar cambiandose, para que se grafique uno u otro script en cada caso. 
+
+?Seria correcto --> 
+
+# Repository 
+GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
+
+
+
+
+# Database description
+<div align="left"> 
+
+* Climate data sets
+  + CHIRPS daily data: This data are [CHIRPS](https://www.chc.ucsb.edu/data/chirps)
+  + CHIRTS daily data: This data are          [CHIRTS](https://www.chc.ucsb.edu/data/chirtsdaily)
+  - NASA POWER data: This data are [NASA](https://power.larc.nasa.gov/data-access-viewer/)
+
+* GCM...
+
+* SoildGrids 
+<div>
+
+
+
+<!--Ok here we need all of our graphs are center--> 
+
+
+# Results.
+
+
+#### Sud-Ouest district location
+
+:::::: {.columns}
+::: {.column width="35%"}
+![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Sud-Ouest.png){width="100%"}
+:::
+::: {.column width="15%"}
+
+::::::
+::: {.column width="45%"}
+![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_climatology_manual_seasons.png)
+:::
+::::::
+
+
+#### Sud-Ouest Multi Annual Climate with Elevation profile
+
+:::::: {.columns}
+::: {.column width="35%"}
+![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_elevation.png){width="80%"}
+:::
+::: {.column width="65%"}
+![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/A_Multi_Anual.png)
+:::
+::::::
+
+
+<div align="center">![Number of consecutive dry days _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_CDD_1.png){width=80%}<div>
+
+
+
+<div align="center">![Temporal variation in CDD _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_CDD_season_1.png){width=50%} <div>
+
+
+
+<div align="center">![Maximum 5-day running average precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P5D_1.png){width=80%} <div>
+
+ajajammm dkjahskfhajkshfiuahyfidxhcnjkvnjdszghfhgasdhjvfbgsyhrtfghvbcxvhgsiaudfrg
+
+<div align="center">![Temporal variation for P5D _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P5D_season_1.png){width=50%} <div>
+
+
+<div align="center">![95th percentile of daily precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P95_1.png){width=80%}<div>
+
+
+<div align="center">![Temporal variation for P95 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P95_season_1.png){width=50%}<div>
+
+
+<div align="center">![Total number of days with maximum temperature greater or equal to 35°C _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_NT35_1.png){width=80%}<div>
+
+
+
+<div align="center">![Temporal variation of NT35 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_NT35_season_1.png){width=50%}<div>
+
+
+<div align="center">![Moisture stress _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_ndws_1.png){width=80%}<div>
+
+
+<div align="center">![Temporal variation of NDWS _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_ndws_season_1.png){width=50%}<div>
+
+
+<div align="center">![Start of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_SLGP_1.png){width=80%}<div>
+
+
+<div align="center">![Temporal variation of SLGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_SLGP_season_1.png){width=50%}<div>
+
+
+
+<div align="center">![Length of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_LGP_1.png){width=80%}<div>
+
+
+
+<div align="center">![Temporal variation of LGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_LGP_season_1.png){width=50%}<div>
+
+
+
+
+
+
+
+
+
