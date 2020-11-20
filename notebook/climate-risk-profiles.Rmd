@@ -25,17 +25,20 @@ root <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/'
 ## county:  Sud-Ouest.
 <div>
 
-
+<div align="left">
+The index calculated in this studio are in the ... , but other information we show in the results section are location, climatology, elevation map (m), historical climate precipitation (mm/year) and temperature (°𝐶). 
+<div>
 
 ```{r, echo = FALSE}
-index <- tibble::tibble(Index = c('CDD', 'P95', 'NT35', 'ndws', 'SLGP', 'LGP', 'HDZ'), 
+index <- tibble::tibble(Index = c('CDD', 'P5D' , 'P95', 'NT35', 'ndws', 'SLGP', 'LGP', 'HDZ'), 
                name = c('Number of consecutive dry days',
+                        'Maximum 5-day running average precipitation',
                         '95th percentile of daily precipitation', 
                         'Total number of days with maximum temperature greater or equal to 35°C 	days', 
                         'Moisture stress', 
                         'Start of growing season', 
                         'Length of growing season', 'Hazards'), 
-               Metric = c('days', 'mm', 'days', 'days', 'day of the year', 'days', '--'))
+               Units = c('days', 'mm/day',  'mm/day', 'days', 'days', 'day of the year', 'days', '--'))
 knitr::kable(index, caption = 'Index')
 ```
 
@@ -98,13 +101,13 @@ GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
 
 :::::: {.columns}
 ::: {.column width="35%"}
-![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Sud-Ouest.png){width="100%"}
+![County location](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Sud-Ouest.png){width="95%"}
 :::
-::: {.column width="15%"}
+::: {.column width="13%"}
 
 ::::::
-::: {.column width="45%"}
-![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_climatology_manual_seasons.png)
+::: {.column width="47%"}
+![Climatology](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_climatology_manual_seasons.png)
 :::
 ::::::
 
@@ -112,74 +115,179 @@ GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
 #### Sud-Ouest Multi Annual Climate with Elevation profile
 
 :::::: {.columns}
-::: {.column width="35%"}
-![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_elevation.png){width="80%"}
+::: {.column width="32%"}
+![Elevation map](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_elevation.png){width="90%"}
 :::
-::: {.column width="65%"}
-![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/A_Multi_Anual.png)
+::: {.column width="68%"}
+![Historic climate mean](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/A_Multi_Anual.png)
 :::
 ::::::
 
 
 
-![Number of consecutive dry days _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_CDD_1.png){width=80%}
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![Number of consecutive dry days _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_CDD_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+    
+:::
+::: {.column width="44%"}
+
+![Temporal variation in CDD _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_CDD_season_1.png){width=100%} 
+
+:::
+::::::
+
+
 
 
 
 fklhjafjkhaksjfa
 
-![Temporal variation in CDD _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_CDD_season_1.png){width=50%} 
-
 hasdjkfhskjdf
 
-![Maximum 5-day running average precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P5D_1.png){width=80%}
+
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![Maximum 5-day running average precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P5D_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+
+:::
+::: {.column width="44%"}
+
+![Temporal variation for P5D _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P5D_season_1.png){width=100%}
+
+:::
+::::::
+
+
 
 ajajammm dkjahskfhajkshfiuahyfidxhcnjkvnjdszghfhgasdhjvfbgsyhrtfghvbcxvhgsiaudfrg
 
-![Temporal variation for P5D _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P5D_season_1.png){width=50%}
-
 ksjalflasfa
 
-![95th percentile of daily precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P95_1.png){width=80%}
+
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![95th percentile of daily precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P95_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+
+:::
+::: {.column width="44%"}
+
+![Temporal variation for P95 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P95_season_1.png){width=100%}
+
+:::
+::::::
+
 
 nfhjkahsfkahskfhak
 
-![Temporal variation for P95 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P95_season_1.png){width=50%}
-
 jsaghkfdahgksjfa
 
-![Total number of days with maximum temperature greater or equal to 35°C _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_NT35_1.png){width=80%}
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![Total number of days with maximum temperature greater or equal to 35°C _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_NT35_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+
+:::
+::: {.column width="44%"}
+
+![Temporal variation of NT35 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_NT35_season_1.png){width=100%}
+
+:::
+::::::
 
 
 afiuyausikfyhakf
 
-![Temporal variation of NT35 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_NT35_season_1.png){width=50%}
-
 fjkashgfjaghkdjsfhka
 
-![Moisture stress _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_ndws_1.png){width=80%}
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![Moisture stress _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_ndws_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+
+:::
+::: {.column width="44%"}
+
+![Temporal variation of NDWS _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_ndws_season_1.png){width=100%}
+
+:::
+::::::
+
 
 mhfbsjamgsfjagsjfgaj
 
-![Temporal variation of NDWS _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_ndws_season_1.png){width=50%}
-
 kjhsafjagfjhagjfgj
 
-![Start of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_SLGP_1.png){width=80%}
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![Start of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_SLGP_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+
+:::
+::: {.column width="44%"}
+
+![Temporal variation of SLGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_SLGP_season_1.png){width=100%}
+
+:::
+::::::
 
 alksfhasfgjhasf
 
-![Temporal variation of SLGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_SLGP_season_1.png){width=50%}
-
 fnhjagfhasfa
 
-![Length of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_LGP_1.png){width=80%}
+
+:::::: {.columns}
+::: {.column width="52%"}
+
+![Length of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_LGP_1.png){width=100%}
+
+:::
+::: {.column width="4%"}
+
+:::
+::: {.column width="44%"}
+
+![Temporal variation of LGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_LGP_season_1.png){width=100%}
+
+:::
+::::::
+
 
 jkfshuyagsfas
-
-![Temporal variation of LGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_LGP_season_1.png){width=50%}
 
 fhjaghsashjdfgasjk
 
 
 # References 
+
+...
+
+# Annexes 
+
