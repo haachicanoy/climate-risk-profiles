@@ -10,8 +10,8 @@ rm(list = ls()); gc(reset = TRUE)
 options(warn = -1, scipen = 999)
 
 suppressMessages(library(pacman))
-suppressMessages(pacman::p_load(tidyr, dplyr, tibble, ggplot2, raster, ncdf4, sf, lubridate, glue, cowsay, fst, ggspatial, vroom, sp, compiler))
-# =--------------------
+suppressMessages(pacman::p_load(tidyr, dplyr, tibble, ggplot2, raster, ncdf4, sf, lubridate, glue, cowsay, fst, ggspatial, vroom, sp, compiler, FactoMineR, factoextra, furrr, future))
+
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
@@ -20,8 +20,6 @@ count_i  <- C_shp <- county <-   c('Sud-Ouest')
 iso3c <- 'BFA'
 Big <- 'B'
 adm_lvl <- 1
-
-
 
 # Ruta Principal para guardados: 
 root <- '//dapadfs/workspace_cluster_8/climateriskprofiles/'
@@ -59,7 +57,6 @@ crd <<- crd
 
 
 # =--------------------
-
 tictoc::tic()
 all_climate <-  fst::fst(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/observational_data/{co}/{county}.fst')) %>% 
   tibble::as_tibble() %>% 
@@ -70,34 +67,12 @@ all_climate <-  fst::fst(glue::glue('//dapadfs/workspace_cluster_8/climateriskpr
   dplyr::select(id, x, y, ISO3, Country, climate)
 tictoc::toc()
 
-
-historic <-  all_climate %>%
-  dplyr::mutate(summary =  purrr::map(.x = climate, .f = function(z){
-    z <- z %>% dplyr::mutate(year = lubridate::year(Date), month = lubridate::month(Date) ,
-                             tmean = (tmax + tmin)/2 )  %>%
-      dplyr::group_by(year) %>%
-      dplyr::summarise(prec = sum(prec), tmean = mean(tmean)) %>%
-      dplyr::ungroup() %>% dplyr::select(-year) %>%
-      dplyr::summarise_all(.funs = function(x){round( mean(x, na.rm = TRUE), 1)}) %>%
-      dplyr::ungroup()})) %>% dplyr::select(-climate) %>% tidyr::unnest()  %>%
-  dplyr::group_by( id, x, y, ISO3, Country) %>%
-  dplyr::summarise_all(~mean(.))
-
-historic <- historic %>% filter(id %in% crd$id)
-
-
-
 # =----------------------------------------------------
 path <- '//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/'
 
 # Prueba
-
-
 reading_data <- function(list_p){
-  
-  time <- list_p$time
-  gcm     <- list_p$gcm
-  period  <- list_p$period
+  time <- list_p$time ; gcm <- list_p$gcm ; period  <- list_p$period
   
   if(time == 'past'){
     # Load calculated indices for 30% of pixels
@@ -116,30 +91,137 @@ reading_data <- function(list_p){
            period = period) 
   return(data_index)}
 
-# reading_data(list_p = tibble(time = 'past', gcm = 'ipsl_cm5a_mr', period = '1985_2015'))
-
-parameters <- tibble(time = c('past', 'future', 'future', 'future', 'future', 'future', 'future'), 
-                     gcm = c('---', 'ipsl_cm5a_mr','miroc_esm_chem','ncc_noresm1_m', 'ipsl_cm5a_mr','miroc_esm_chem','ncc_noresm1_m'), 
-                     period = c('1985_2015', '2021_2045', '2021_2045', '2021_2045', '2041_2065', '2041_2065', '2041_2065'))
+# =------------------------------------------------------------------------------------
+parameters <- tibble(time = 'past', gcm = '---', period = '1985_2015')
 
 data_lect <- parameters %>% group_split(row_number()) %>%  
-  purrr::map(.f = reading_data) %>% purrr::map(.f = as_tibble) %>% 
-  bind_rows()
+  purrr::map(.f = reading_data) %>% purrr::map(.f = as_tibble) %>% bind_rows()  %>% 
+  dplyr::select(-gcm, -period, -time)
 
+library(trend)
 
+slope_f <- function(x){
+  slope <- trend::sens.slope(x = data_lect$P5D, conf.level = 0.95)
+  #p_value = as.numeric(slope$p.value)
+  # sl <- tibble(slope = as.numeric(slope$estimates),  p_value)
+  slope = as.numeric(slope$estimates)
+  return(slope)}
 
-data_lect_basic <-  data_lect %>% 
-  dplyr::select(id,x,y,ISO3,Country,county,season,CDD,P5D,P95,NT35, ndws, time, gcm, period) %>% 
-  group_by(id,x,y,ISO3,Country,county, season, time, gcm, period) %>% 
+lect1 <- data_lect %>% 
+  dplyr::select(id, x, y, ISO3, Country, county, season, CDD:ndws) %>% 
+  group_by(id, x, y, ISO3, Country, county, season) %>% 
+  summarise_all(.funs = funs(mean, sd, slope_f)) 
+
+tictoc::tic()
+prueba_1 <- data_lect %>% 
+  dplyr::select(id, x, y, ISO3, Country, county,  gSeason, SLGP, LGP) %>% 
+  group_by(id, x, y, ISO3, Country, county, gSeason) %>% 
   summarise_all(.funs = funs(mean, sd))
+tictoc::toc()
 
 
-data_lect_basic %>% ungroup() %>% 
-  dplyr::select(-gcm) %>% 
-  group_by(id,x,y,ISO3,Country,county,season, time, period) %>% 
-  summarise_all(.funs = funs(mean)) %>% 
-  ungroup() %>% 
-  dplyr::select(-period) %>% 
-  group_by(id,x,y,ISO3,Country,county,season, time) %>% 
-  summarise_all(.funs = funs(mean)) %>% 
-  arrange(time)
+
+# =- 
+
+ncores <- 12 # Modify this part if you want run in a server.  
+plan(cluster, workers = ncores)
+
+prueba_1a <- data_lect %>% 
+  dplyr::select(id, gSeason, SLGP, LGP) %>% # filter(id == 223024, gSeason == 1) %>% 
+  group_split(id, gSeason) %>% 
+  furrr::future_map(.f = function(x){group_by(x, id, gSeason) %>% 
+      summarise(SLGP_slope_f = slope_f(SLGP), LGP_slope_f = slope_f(LGP) )})
+
+
+lect2 <- prueba_1a %>% bind_rows() %>% full_join(prueba_1 , .)
+
+
+mutate(lect1 , season = stringr::str_remove(season, 's') %>% as.numeric())
+
+lect1 %>% mutate(season = stringr::str_remove(season, 's'))
+
+
+full_test <- full_join(mutate(lect1 , season = stringr::str_remove(season, 's') %>% as.numeric()), 
+                       rename(lect2, season = 'gSeason') %>% dplyr::select(-x, -y) ) %>% ungroup()
+
+# full_test %>% dplyr::select(ends_with('_slope_f'))
+
+
+# =----------------------------------------------------------------------- PCA
+
+numeric <- full_test %>% dplyr::select(-id, -x, -y, -ISO3, -Country, -county, -season)
+corrplot::corrplot.mixed(corr = numeric%>%
+                           cor(use = 'pairwise.complete.obs'))
+
+normalization <- function(x){
+  y <- (x - min(x, na.rm = T))/(max(x, na.rm = T) - min(x, na.rm = T))
+  return(y)
+}
+
+
+numeric_norm <- numeric %>% apply(X = ., MARGIN = 2, FUN = normalization) %>% as_tibble()
+
+corrplot::corrplot.mixed(corr = numeric_norm %>%
+                           cor(use = 'pairwise.complete.obs'))
+
+clm_pca <- numeric %>% FactoMineR::PCA(X = ., scale.unit = T, ncp = ncol(.), graph = F)
+
+fviz_screeplot(clm_pca, ncp = 4)
+fviz_pca_var(clm_pca, col.var = "contrib")
+
+coord <- clm_pca$ind$coord[, 1:2] %>% as_tibble() %>% 
+  bind_cols(dplyr::select(full_test, id, x, y, ISO3, Country, county, season), .)
+
+tbl <- coord 
+cSeasons_idcs <- c('Dim.1','Dim.2')
+
+cat('>>> Obtain raster for all coordinates of big county\n')
+r <- raster::rasterFromXYZ(xyz = all_climate %>% dplyr::select(x, y, id))
+raster::crs(r) <- "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
+r.empty <- r
+r.empty[] <- NA
+
+
+# =------
+c_idx <- unique(tbl$season) %>%
+  purrr::map(.f = function(i){
+    cat(paste0(' --- Filter indices per growing season: ',i,'\n'))
+    tbl2 <<- tbl[which(tbl$season == i),] %>%
+      tidyr::drop_na()
+    
+    cat(paste0(' --- Create SpatialDataFrame object\n'))
+    spdf <<- sp::SpatialPointsDataFrame(coords      = tbl2[,c('x','y')] %>% data.frame,
+                                        data        = tbl2 %>% data.frame,
+                                        proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+    
+    surfaces <- 1:length(cSeasons_idcs) %>%
+      purrr::map(.f = function(j){
+        
+        cat(paste0(' --- Fit inverse distance weighted interpolation for: ',cSeasons_idcs[j],'\n'))
+        glue::glue('idw_fit <- gstat::gstat(formula = {cSeasons_idcs[j]} ~ 1, locations = spdf)') %>%
+          as.character %>%
+          parse(text = .) %>%
+          eval(expr = ., envir = .GlobalEnv)
+        idw_int <- raster::interpolate(r.empty, idw_fit)
+        idw_msk <- raster::mask(idw_int, r)
+        return(idw_msk)
+        
+      })
+    
+    surfaces <- raster::stack(surfaces)
+    names(surfaces) <- cSeasons_idcs; rm(spdf)
+    
+    idx_df          <- all_climate %>% dplyr::select(x, y, id)
+    idx_df$ISO3     <- iso3c
+    idx_df$Country  <- country
+    idx_df$county   <- county
+    idx_df          <- cbind(idx_df, raster::extract(surfaces, idx_df %>% dplyr::select(x, y) %>% data.frame)) %>% 
+      as_tibble()
+    idx_df$season   <- i
+    return(idx_df) }) %>% bind_rows
+
+
+ggplot() + geom_tile(data = c_idx, aes(x = x, y =  y, fill = Dim.1)) + theme_bw()
+
+ggplot() + geom_tile(data = c_idx, aes(x = x, y =  y, fill = Dim.2)) + theme_bw()
+
