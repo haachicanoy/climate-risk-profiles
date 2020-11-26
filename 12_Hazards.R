@@ -101,7 +101,7 @@ data_lect <- parameters %>% group_split(row_number()) %>%
 library(trend)
 
 slope_f <- function(x){
-  slope <- trend::sens.slope(x = data_lect$P5D, conf.level = 0.95)
+  slope <- trend::sens.slope(x = x, conf.level = 0.95)
   #p_value = as.numeric(slope$p.value)
   # sl <- tibble(slope = as.numeric(slope$estimates),  p_value)
   slope = as.numeric(slope$estimates)
@@ -113,38 +113,21 @@ lect1 <- data_lect %>%
   summarise_all(.funs = funs(mean, sd, slope_f)) 
 
 tictoc::tic()
-prueba_1 <- data_lect %>% 
+lect2 <- data_lect %>% 
   dplyr::select(id, x, y, ISO3, Country, county,  gSeason, SLGP, LGP) %>% 
   group_by(id, x, y, ISO3, Country, county, gSeason) %>% 
-  summarise_all(.funs = funs(mean, sd))
+  summarise_all(.funs = funs(mean, sd, slope_f))
 tictoc::toc()
 
 
 
 # =- 
 
-ncores <- 12 # Modify this part if you want run in a server.  
-plan(cluster, workers = ncores)
-
-prueba_1a <- data_lect %>% 
-  dplyr::select(id, gSeason, SLGP, LGP) %>% # filter(id == 223024, gSeason == 1) %>% 
-  group_split(id, gSeason) %>% 
-  furrr::future_map(.f = function(x){group_by(x, id, gSeason) %>% 
-      summarise(SLGP_slope_f = slope_f(SLGP), LGP_slope_f = slope_f(LGP) )})
-
-
-lect2 <- prueba_1a %>% bind_rows() %>% full_join(prueba_1 , .)
-
-
-mutate(lect1 , season = stringr::str_remove(season, 's') %>% as.numeric())
-
-lect1 %>% mutate(season = stringr::str_remove(season, 's'))
-
-
 full_test <- full_join(mutate(lect1 , season = stringr::str_remove(season, 's') %>% as.numeric()), 
                        rename(lect2, season = 'gSeason') %>% dplyr::select(-x, -y) ) %>% ungroup()
 
 # full_test %>% dplyr::select(ends_with('_slope_f'))
+write.csv(x = full_test, file = glue::glue('{path}{country}/graphs/{county}/full_data.csv'))
 
 
 # =----------------------------------------------------------------------- PCA
@@ -169,11 +152,27 @@ clm_pca <- numeric %>% FactoMineR::PCA(X = ., scale.unit = T, ncp = ncol(.), gra
 fviz_screeplot(clm_pca, ncp = 4)
 fviz_pca_var(clm_pca, col.var = "contrib")
 
-coord <- clm_pca$ind$coord[, 1:2] %>% as_tibble() %>% 
-  bind_cols(dplyr::select(full_test, id, x, y, ISO3, Country, county, season), .)
 
-tbl <- coord 
-cSeasons_idcs <- c('Dim.1','Dim.2')
+
+
+# =--- Pruebas de indices
+
+pca_index <- function(pca = natural_pca, percent = 80)
+{
+  ncomp    <- which(pca$eig[,3] >= percent)[1]
+  variance <- pca$eig[1:ncomp,2] %>% matrix(data = ., ncol = 1, byrow = F)
+  raw_indx <- pca$ind$coord[,1:ncomp] %*% variance
+  fnl_indx <- 0.1 + ((raw_indx-min(raw_indx))/(max(raw_indx)-min(raw_indx))*0.9)
+  fnl_indx <- fnl_indx %>% as.numeric()
+  return(fnl_indx)
+}
+
+
+
+# =-- Pruebas de interpolacion 
+tbl <- bind_cols(dplyr::select(full_test, id, x, y, ISO3, Country, county, season), 
+                 ind = pca_index(clm_pca, percent = 70)) 
+cSeasons_idcs <- c('ind')
 
 cat('>>> Obtain raster for all coordinates of big county\n')
 r <- raster::rasterFromXYZ(xyz = all_climate %>% dplyr::select(x, y, id))
@@ -182,7 +181,7 @@ r.empty <- r
 r.empty[] <- NA
 
 
-# =------
+# =------ Interpolation
 c_idx <- unique(tbl$season) %>%
   purrr::map(.f = function(i){
     cat(paste0(' --- Filter indices per growing season: ',i,'\n'))
@@ -221,7 +220,35 @@ c_idx <- unique(tbl$season) %>%
     return(idx_df) }) %>% bind_rows
 
 
-ggplot() + geom_tile(data = c_idx, aes(x = x, y =  y, fill = Dim.1)) + theme_bw()
+country1 <- country1 %>% sf::st_as_sf()
+shp_sf <- shp  %>% sf::st_as_sf()
+xlims <- sf::st_bbox(shp_sf)[c(1, 3)]
+ylims <- sf::st_bbox(shp_sf)[c(2, 4)]
+map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>% 
+  sf::st_as_sf()
 
-ggplot() + geom_tile(data = c_idx, aes(x = x, y =  y, fill = Dim.2)) + theme_bw()
+
+
+write.csv(x = c_idx, file = glue::glue('{path}{country}/graphs/{county}/Hazards.csv'))
+
+ggplot() + 
+  # geom_sf(data = map_world, fill = gray(.9), color = gray(.9)) +
+  geom_sf(data = country1, fill = 'white', color = gray(.5)) +
+  geom_tile(data = c_idx, aes(x = x, y =  y, fill = ind )) + 
+  geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  coord_sf(xlim = xlims, ylim = ylims) +
+  scale_fill_gradient2(low = "#E8E8E8", mid = "#64ACBE", high = "#985356", 
+                       guide = guide_colourbar(barwidth = 12, 
+                                               label.theme = element_text(angle = 25, size = 15))) +
+  labs(fill = glue::glue('Hazard'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
+  theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
+                     legend.title=element_text(size=15), 
+                     legend.spacing = unit(5, units = 'cm'),
+                     legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
+
+# #574249 --- # #64ACBE  ---- # #E8E8E8
+
+
+ggsave(glue::glue('{path}{country}/graphs/{county}/Hazards.png') , width = 8, height = 5.5, dpi = 300)
+
 
