@@ -252,3 +252,90 @@ ggplot() +
 ggsave(glue::glue('{path}{country}/graphs/{county}/Hazards.png') , width = 8, height = 5.5, dpi = 300)
 
 
+
+# =----------------------------------------------------------
+
+comp <- clm_pca$ind$coord[,1:2] %>% as_tibble() %>% bind_cols(dplyr::select(full_test, id, x, y), .)
+
+
+Dq1 <- quantile(comp$Dim.1, c(0.33, 0.66))
+Dq2 <- quantile(comp$Dim.2, c(0.33, 0.66))
+
+
+Julian_graph <- comp %>% 
+  mutate(D1_m =  dplyr::case_when(Dim.1 < Dq1[1] ~ 1, 
+                                  Dim.1 > Dq1[2] ~ 3, 
+                                  TRUE ~ 2), 
+         D2_m =  dplyr::case_when(Dim.2 < Dq2[1] ~ 1, 
+                                  Dim.2 > Dq2[2] ~ 3, 
+                                  TRUE ~ 2)) %>% 
+  mutate(all_two = dplyr::case_when(D1_m == 1 & D2_m == 1 ~ 1, 
+                                    D1_m == 1 & D2_m == 2 ~ 2,
+                                    D1_m == 1 & D2_m == 3 ~ 3,
+                                    D1_m == 2 & D2_m == 1 ~ 4, 
+                                    D1_m == 2 & D2_m == 2 ~ 5,
+                                    D1_m == 2 & D2_m == 3 ~ 6,
+                                    D1_m == 3 & D2_m == 1 ~ 7, 
+                                    D1_m == 3 & D2_m == 2 ~ 8,
+                                    D1_m == 3 & D2_m == 3 ~ 9,
+                                    TRUE ~ NA_real_)) # %>% count(all_two)
+
+
+# =--- Interpolar. 
+tbl2 <- Julian_graph
+cSeasons_idcs <- 'all_two' 
+
+tbl_f <- 1 %>% purrr::map(.f = function(i){
+  tbl2 <<- tbl2 %>% tidyr::drop_na()
+  
+  cat(paste0(' --- Create SpatialDataFrame object\n'))
+  spdf <<- sp::SpatialPointsDataFrame(coords      = tbl2[,c('x','y')] %>% data.frame,
+                                      data        = tbl2 %>% data.frame,
+                                      proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+  
+  surfaces <- 1:length(cSeasons_idcs) %>%
+    purrr::map(.f = function(j){
+      
+      cat(paste0(' --- Fit inverse distance weighted interpolation for: ',cSeasons_idcs[j],'\n'))
+      glue::glue('idw_fit <- gstat::gstat(formula = {cSeasons_idcs[j]} ~ 1, locations = spdf)') %>%
+        as.character %>%
+        parse(text = .) %>%
+        eval(expr = ., envir = .GlobalEnv)
+      idw_int <- raster::interpolate(r.empty, idw_fit)
+      idw_msk <- raster::mask(idw_int, r)
+      return(idw_msk)
+      
+    })
+  
+  surfaces <- raster::stack(surfaces)
+  names(surfaces) <- cSeasons_idcs; rm(spdf)
+  
+  idx_df          <- all_climate %>% dplyr::select(x, y, id)
+  idx_df$ISO3     <- iso3c
+  idx_df$Country  <- country
+  idx_df$county   <- county
+  idx_df          <- cbind(idx_df, raster::extract(surfaces, idx_df %>% dplyr::select(x, y) %>% data.frame)) %>% 
+    as_tibble()
+  idx_df$season   <- i
+  return(idx_df) }) %>% bind_rows
+
+tbl_f <- tbl_f %>% mutate(all_two = round(all_two, 0))
+
+
+
+# =--- 
+
+
+ggplot() + 
+  geom_sf(data = country1, fill = 'white', color = gray(.5)) +
+  geom_tile(data = tbl_f, aes(x = x, y =  y, fill = as.factor(all_two ))) + 
+  geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
+  scale_fill_manual(values = c("#E8E8E8", "#E4ACAC", "#C85A5A", "#B0D5DF", "#AD9EA5", "#985356",
+                               "#64ACBE", "#627F8C", "#574249"), guide =) +
+  coord_sf(xlim = xlims, ylim = ylims) +
+  labs(fill = NULL, title = 'Hazards', x = 'Longitude', y = 'Latitude') +
+  theme_bw() + theme(legend.position = 'none', text = element_text(size=15), 
+                     legend.title=element_text(size=15), 
+                     legend.spacing = unit(5, units = 'cm'),
+                     legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5))
+ggsave(glue::glue('{path}{country}/graphs/{county}/Hazards_biv.png') , width = 8, height = 5.5, dpi = 300)
