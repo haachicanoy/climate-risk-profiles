@@ -149,9 +149,10 @@ corrplot::corrplot.mixed(corr = numeric_norm %>%
 
 clm_pca <- numeric %>% FactoMineR::PCA(X = ., scale.unit = T, ncp = ncol(.), graph = F)
 
-fviz_screeplot(clm_pca, ncp = 4)
+fviz_screeplot(clm_pca, ncp = 4) 
+ggsave(glue::glue('{path}{country}/graphs/{county}/bar.png'))
 fviz_pca_var(clm_pca, col.var = "contrib")
-
+ggsave(glue::glue('{path}{country}/graphs/{county}/contrib.png'))
 
 
 
@@ -333,6 +334,8 @@ ggplot() +
   scale_fill_manual(values = c("#E8E8E8", "#E4ACAC", "#C85A5A", "#B0D5DF", "#AD9EA5", "#985356",
                                "#64ACBE", "#627F8C", "#574249"), guide =) +
   coord_sf(xlim = xlims, ylim = ylims) +
+  scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
+  scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
   labs(fill = NULL, title = 'Hazards', x = 'Longitude', y = 'Latitude') +
   theme_bw() + theme(legend.position = 'none', text = element_text(size=15), 
                      legend.title=element_text(size=15), 
