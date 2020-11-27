@@ -1,5 +1,6 @@
 ---
-title: "Climate Risk Profiles methodology and results"
+title: "PARM toolkit - Weather risks assessment"
+subtitle: "Burkina Faso, Sud-Ouest"
 output:
   html_document:
   df_print: paged
@@ -20,18 +21,50 @@ setwd('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/notebook/'
 root <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/'
 ```
 
-<div align="center">
-# Country: Burkina_Faso.
-## county:  Sud-Ouest.
+<!-- <div align="center"> 
+<div> -->
+## Data description
+
+
+The index calculated in this studio are in the ... , but other information we show in the results section are location, climatology, elevation map (m), historical climate precipitation (mm/year) and temperature (°𝐶). 
+
+
+## Input data
+
+
+### Database description
+
+<div align="left"> 
+
+* Climate data sets
+  + CHIRPS daily data: This data are <https://www.chc.ucsb.edu/data/chirps>
+  + CHIRTS daily data: This data are          <https://www.chc.ucsb.edu/data/chirtsdaily>
+  - NASA POWER data: This data are <https://power.larc.nasa.gov/data-access-viewer/>
+  
+* Soilgrids: <https://www.isric.org/explore/soilgrids> 
+
+* GCM...
+
 <div>
 
-<div align="left">
-The index calculated in this studio are in the ... , but other information we show in the results section are location, climatology, elevation map (m), historical climate precipitation (mm/year) and temperature (°𝐶). 
-<div>
+
+
+
+### Our parameters description. 
+```{r, echo=FALSE}
+parameters <- suppressMessages(  readr::read_csv('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/parameters.csv') )
+
+knitr::kable(parameters, caption = 'Parameters')
+```
+
+
+
+## Output data
 
 ```{r, echo = FALSE}
-index <- tibble::tibble(Index = c('CDD', 'P5D' , 'P95', 'NT35', 'ndws', 'SLGP', 'LGP', 'HDZ'), 
-               name = c('Number of consecutive dry days',
+index <- tibble::tibble(Risk = c('Drought', 'Flooding', 'Flooding', 'Heat', 'Flooding', 'Growing-season related', 'Growing-season related', 'Risk'), 
+                        Code = c('CDD', 'P5D' , 'P95', 'NT35', 'ndws', 'SLGP', 'LGP', 'HDZ'), 
+               Index = c('Number of consecutive dry days',
                         'Maximum 5-day running average precipitation',
                         '95th percentile of daily precipitation', 
                         'Total number of days with maximum temperature greater or equal to 35°C 	days', 
@@ -55,12 +88,6 @@ The last chapter is only the reference and i guess said something about who do w
 <div>
 
 
-### Our parameters description. 
-```{r, echo=FALSE}
-parameters <- suppressMessages(  readr::read_csv('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/parameters.csv') )
-
-knitr::kable(parameters, caption = 'Parameters')
-```
 
 
 
@@ -70,24 +97,6 @@ knitr::kable(parameters, caption = 'Parameters')
 
 ### Repository 
 GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
-
-
-
-
-### Database description
-
-<div align="left"> 
-
-* Climate data sets
-  + CHIRPS daily data: This data are <https://www.chc.ucsb.edu/data/chirps>
-  + CHIRTS daily data: This data are          <https://www.chc.ucsb.edu/data/chirtsdaily>
-  - NASA POWER data: This data are <https://power.larc.nasa.gov/data-access-viewer/>
-  
-* Soilgrids: <https://www.isric.org/explore/soilgrids> 
-
-* GCM...
-
-<div>
 
 
 
@@ -283,6 +292,23 @@ fnhjagfhasfa
 jkfshuyagsfas
 
 fhjaghsashjdfgasjk
+
+
+
+
+:::::: {.columns}
+::: {.column width="70%"}
+
+![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Hazards_biv.png){width=100%}
+
+::: 
+::: {.column width="30%"}
+
+![](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Hazards_count.png){width=90%}
+
+:::
+::::::
+
 
 
 # References 
