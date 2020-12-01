@@ -785,17 +785,17 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('(mm)'), title = 'Historical Annual\nMean Precipitation (mm/year)',x = 'Longitude', y = 'Latitude') +
       scale_fill_gradientn(colours = blues9, 
-                           guide = guide_colourbar(barwidth = 12, 
-                                                   label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 25, 
+                                                   label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/H_prec.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/H_prec.png') , width = 10, height = 10, dpi = 300)
     
     ##########################################################
     
@@ -806,19 +806,19 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = expression('('*~degree*C*')'), title = expression(atop('Historical Annual','Mean Temperature('*~degree*C*')')),x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient(low = "yellow", high = "red",
-                          guide = guide_colourbar(barwidth = 12,  
-                                                  label.theme = element_text(angle = 25, size = 15)))+
+                          guide = guide_colourbar(barwidth = 25,  
+                                                  label.theme = element_text(angle = 25, size = 35)))+
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/H_tmn.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/H_tmn.png') , width = 10, height = 10, dpi = 300)
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/A_Multi_Anual.png'), width=15.5,height=6.5,units="in", res = 300)
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/A_Multi_Anual.png'), width=20,height=10,units="in", res = 300)
     print(gridExtra::grid.arrange(prec, tmn, ncol=2,
                                   top = glue::glue('{Country}, {county}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
