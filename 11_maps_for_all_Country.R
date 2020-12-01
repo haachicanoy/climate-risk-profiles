@@ -117,23 +117,58 @@ Clim_graph <- function(historic){
     mutate(Initals = substr(name, start = 1, stop = 3))
   
   # =-------------------------------------------------------------------------------
-  pais <- ggplot() +
+  pos <- which(map_world$ISO3 == iso3c)
+  map_world <- map_world %>% filter(CONTINENT == map_world[pos, ]$CONTINENT)
+  pos <- which(map_world$ISO3 == iso3c)
+  spare_mtx <- st_intersects(map_world, map_world)
+  all_int <- spare_mtx[pos][[1]]
+  map_world <- map_world[all_int, ]
+  
+  
+  proof <- as_tibble(st_centroid(map_world) %>% st_coordinates())  %>%
+    mutate(iso = map_world$ISO3, name =  iconv(map_world$NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>%
+    mutate(Initals = substr(name, start = 1, stop = 3))
+  
+  
+  glwd1 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_1.shp' ) 
+  crs(glwd1) <- crs(map_world)
+  glwd1 <- glwd1 %>% sf::st_as_sf()
+  
+  
+  glwd2 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_2.shp' ) 
+  crs(glwd2) <- crs(map_world)
+  glwd2 <- glwd2 %>% sf::st_as_sf()
+  
+  
+  
+  # geom_label_repel(data=counties_spec, aes(x=lon, y=lat, label=name)) +
+  pais <-  ggplot() +
     geom_sf(data = map_world, fill = NA, color = gray(.8)) +  
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = country, fill = 'lightgray', color = gray(.1), alpha = 0.2) +
-    geom_sf(data = shp_sf, aes(fill = NAME_1), color = gray(.8), alpha = 0.8) +
-    theme_bw() +
-    labs(x = NULL, y = NULL, fill = 'County') +
-    geom_sf_label(data = map_world, aes(label = NAME), colour ='lightgray') +
-    geom_text(data = af, aes(X, Y, label = Initals), colour ='black') +
+    geom_sf(data = shp_sf,fill = 'lightgray', color = gray(.1), alpha = 0.4) +
+    theme_bw() + labs(x = NULL, y = NULL, fill = 'County') +
     coord_sf(xlim = limx, ylim = limy) +
-    scale_fill_brewer('County',palette="Spectral") +
-    theme(legend.position = 'bottom', text = element_text(size=15), 
-          legend.text = element_text(size=15),
-          legend.title=element_text(size=15))  + guides(fill = guide_legend(ncol = 3))
+    # scale_fill_brewer('County',palette="Spectral") +
+    ggrepel::geom_label_repel(data=proof, aes(x=X, y=Y, label=name), 
+                              arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
+                              force = 10, 
+                              size = 6) +
+    ggspatial::annotation_scale(location = "tl", width_hint = 0.5, pad_y = unit(0.3, "in")) +
+    ggspatial::annotation_north_arrow(location = "tl", which_north = "true", 
+                                      pad_x = unit(0.1, "in"), pad_y = unit(0.5, "in"), # 0.2 # 0.3
+                                      style = north_arrow_fancy_orienteering) +
+    geom_text(data = af, aes(X, Y, label = Initals, shape = Initals), colour ='black', show.legend = TRUE, size=6) +
+    scale_shape_manual(values = 1:nrow(af), 
+                       name=NULL,
+                       labels= paste0(af$name, '(' , af$Initals , ')'))+
+    theme(legend.position = 'bottom', text = element_text(size=18), 
+          legend.text = element_text(size=18),
+          legend.title=element_text(size=18))  + 
+    guides(shape = guide_legend(ncol = 3))
   
   ggsave(glue::glue('{path}/Country.png') , width = 10, height = 5.5)
-  
-  
   
   # =--------------------------------------------------------
   
@@ -649,7 +684,7 @@ do_clim_Country <- function(data_split){
   ggsave(glue::glue('{path}/maps/Dif_{index_f}_S{semester}.png') , width = 8, height = 5.5)
   
   
-  png(filename = glue::glue('{path}/maps/Dif_{index_f}_{semester}.png') , width=12.5,height=4.5,units="in", res = 300)
+  png(filename = glue::glue('{path}/maps/Dif_{index_f}_{semester}.png') , width=12.5,height=4.5,units="in")
   print(gridExtra::grid.arrange(f, f1, f_d, ncol=3,  
                                 top = glue::glue('{country}\nS:{semester}',
                                                  bottom =   "Data source: Alliance Bioversity-CIAT")))
