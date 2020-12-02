@@ -91,15 +91,25 @@ for(i in 1:length(count_i)){
       
     } else{print('Change big argument... >.<')}
     
-    limits <- dplyr::select(median_data, CDD, P5D, P95, NT35, ndws) %>% 
-      dplyr::summarise_all(.funs = c('min', 'max'))
-    
     median_data <- median_data %>% dplyr::filter(time == 'future') %>%
-      dplyr::rename('CDD_f' = 'CDD'   , 'P5D_f' = 'P5D'  , 'P95_f'= 'P95' , 'NT35_f' = 'NT35', 
+      group_by( id, ISO3, county, Country, x, y, time, semester) %>% 
+      summarise_all(mean) %>% mutate_at(.vars =  vars(CDD, NT35), .funs = function(x){round(x, 0)}) %>% 
+      ungroup() %>% 
+      dplyr::rename('CDD_f' = 'CDD', 'P5D_f' = 'P5D'  , 'P95_f'= 'P95' , 'NT35_f' = 'NT35', 
                     'ndws_f' = 'ndws' ) %>%
       dplyr::select(-time) %>%
       dplyr::inner_join(dplyr::filter(median_data , time == 'past') %>% dplyr::select(-time), . ) %>%
       dplyr::mutate(CDD_c = CDD_f - CDD, P5D_c = P5D_f - P5D, P95_c = P95_f - P95, NT35_c = NT35_f -NT35, ndws_c = ndws_f - ndws)
+    
+    
+    limits <- median_data %>% 
+      dplyr::select(id, contains('_f')) %>% 
+      setNames(c('id', 'CDD', 'P5D',  'P95', 'NT35', 'ndws')) %>% 
+      mutate(time = 'f') %>% 
+      bind_rows(dplyr::select(median_data, id, CDD:ndws) %>% mutate(time = 'p') , .) %>%
+      dplyr::select(-id) %>% 
+      dplyr::summarise_all(.funs = c('min', 'max'))
+    
     
     # Aqui se hace solo la figura base...
     shp_sf <- shp  %>% sf::st_as_sf()
@@ -113,14 +123,56 @@ for(i in 1:length(count_i)){
     map_world <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/all_country/all_countries.shp')) %>% 
       sf::st_as_sf()
     
-    b <- ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
-      geom_sf(data = country, fill = '#f2f2f2', color = gray(.3), alpha = 0.35) +
-      geom_sf(data = shp_sf, fill = 'red', color = gray(.1)) +
+    # =-------------------------------------------------------------------------------
+    pos <- which(map_world$ISO3 == iso3c)
+    map_world <- map_world %>% filter(CONTINENT == map_world[pos, ]$CONTINENT)
+    pos <- which(map_world$ISO3 == iso3c)
+    spare_mtx <- st_intersects(map_world, map_world)
+    all_int <- spare_mtx[pos][[1]]
+    map_world <- map_world[all_int, ]
+    
+    proof <- as_tibble(st_centroid(map_world) %>% st_coordinates())  %>%
+      mutate(iso = map_world$ISO3, name =  iconv(map_world$NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+    
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$NAME_1) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+    
+    
+    glwd1 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_1.shp' ) 
+    crs(glwd1) <- crs(map_world)
+    glwd1 <- glwd1 %>% sf::st_as_sf()
+    
+    
+    glwd2 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_2.shp' ) 
+    crs(glwd2) <- crs(map_world)
+    glwd2 <- glwd2 %>% sf::st_as_sf()
+    
+    
+    b <-  ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+      geom_sf(data = country,  fill = 'lightgray', color = gray(.1), alpha = 0.2) +
+      geom_sf(data = shp_sf, fill = 'gray' , color = gray(.1)) +
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       coord_sf(xlim = limx, ylim = limy) +
+      ggrepel::geom_label_repel(data=proof, aes(x=X, y=Y, label=name),
+                                arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
+                                force = 10,
+                                size = 6) +
+      geom_text(data = af, aes(X, Y, label = Initals, shape = Initals), colour ='black', show.legend = TRUE, size=6) +
+      ggspatial::annotation_scale(location = "tl", width_hint = 0.5, pad_y = unit(0.3, "in")) +
+      ggspatial::annotation_north_arrow(location = "tl", which_north = "true", 
+                                        pad_x = unit(0.1, "in"), pad_y = unit(0.5, "in"), # 0.2 # 0.3
+                                        style = north_arrow_fancy_orienteering) +
+      scale_shape_manual(values = 1:nrow(af),
+                         name=NULL,
+                         labels= paste0(af$name, '(' , af$Initals , ')'))+
+      labs(x = NULL, y = NULL) +
       theme_bw() +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            axis.text.x = element_blank(), axis.text.y = element_blank(),
-            plot.title = element_text(hjust = 0.5, size = 7, face = "bold"))
+      theme(legend.position = 'bottom', text = element_text(size=18), 
+            legend.text = element_text(size=18),
+            legend.title=element_text(size=18))  +  guides(shape = guide_legend(ncol = 3))
     
     
     ggsave(glue::glue('{path}{Country}/graphs/{tolower(county)}/maps/{county}.png') , width = 8, height = 5.5, dpi = 300)
@@ -131,45 +183,45 @@ for(i in 1:length(count_i)){
     
     index_a <- 'CDD'
     
-    a <-ggplot() +
+    a <- ggplot() +
       geom_tile(data = median_data, aes(x = x, y = y, fill = CDD)) +
       geom_sf(data = country, fill = NA, color = gray(.8)) +
       geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_a}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, 
-                                                   label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, 
+                                                   label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_a}_past_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_a}_past_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
     # =- Lo mismo para futuro...
     
-    a1 <-ggplot() +
+    a1 <- ggplot() +
       geom_tile(data = median_data, aes(x = x, y = y, fill = CDD_f)) +
       geom_sf(data = country, fill = NA, color = gray(.8)) +
       geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_a}\n(days)  '), title = 'Future',x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$CDD_min, 2)-0.1, round(limits$CDD_max,2) + 0.1), 
-                           guide = guide_colourbar(barwidth = 12, 
-                                                   label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, 
+                                                   label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_a}_future_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_a}_future_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
     a_d <- ggplot() +
@@ -179,18 +231,18 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_a}\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_a}_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_a}_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_a}_{semester}.png'), width=15.5,height=6.5,units="in", res = 300) # width = 1580, height = 720,
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_a}_{semester}.png'), width=28,height=10,units="in", res = 300) # width = 1580, height = 720,
     print(gridExtra::grid.arrange(a, a1, a_d, ncol=3,  
                                   top = glue::glue('{Country}, {county}\nS:{semester}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -211,15 +263,15 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_c}\n(mm)  '), title = 'Historic',x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$P5D_min, 2)- 0.1, 
                                       round(limits$P5D_max, 2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_c}_past_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_c}_past_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     # =- Futuro.
     c1 <- ggplot() +
@@ -230,15 +282,15 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_c}\n(mm)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$P5D_min, 2)- 0.1, 
                                       round(limits$P5D_max, 2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_c}_future_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_c}_future_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
     c_d <- ggplot() +
@@ -248,19 +300,19 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_c}\n(mm)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                           guide = guide_colourbar(barwidth = 12, 
-                                                   label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, 
+                                                   label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_c}_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_c}_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_c}_{semester}.png') , width=15.5,height=6.5,units="in", res = 300)
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_c}_{semester}.png') , width=28,height=10,units="in", res = 300)
     print(gridExtra::grid.arrange(c, c1, c_d, ncol=3,  
                                   top = glue::glue('{Country}, {county}\nS:{semester}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -278,15 +330,15 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_d}\n(mm)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$P95_min,2)-0.1, 
                                       round(limits$P95_max, 2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_d}_past_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_d}_past_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     # =----
     
@@ -298,16 +350,16 @@ for(i in 1:length(count_i)){
       labs(fill = glue::glue('{index_d}\n(mm)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits =  c(round(limits$P95_min,2)-0.1, 
                                        round(limits$P95_max, 2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_d}_future_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_d}_future_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
     
@@ -318,19 +370,19 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_d}\n(mm)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_d}_S{semester}.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_d}_S{semester}.png') , width = 10, height = 10, dpi = 300)
     
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_d}_{semester}.png') , width=15.5,height=6.5,units="in", res = 300)
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_d}_{semester}.png') , width=28,height=10,units="in", res = 300)
     print(gridExtra::grid.arrange(d, d1, d_d, ncol=3,  
                                   top = glue::glue('{Country}, {county}\nS:{semester}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -348,15 +400,15 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_e}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_past_S{semester}.png') , width = 8, height = 5.5)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_past_S{semester}.png') , width = 10, height = 10)
     
     # =------------
     
@@ -367,15 +419,15 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_e}\n(days)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_future_S{semester}.png') , width = 10, height = 10)
     
     
     
@@ -385,18 +437,18 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_e}\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_e}_S{semester}.png') , width = 8, height = 5.5)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_e}_S{semester}.png') , width = 10, height = 10)
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_e}_{semester}.png') , width=15.5,height=6.5,units="in", res = 300)
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_e}_{semester}.png') , width=28,height=10,units="in", res = 300)
     print(gridExtra::grid.arrange(e, e1, e_d, ncol=3,  
                                   top = glue::glue('{Country}, {county}\nS:{semester}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -414,16 +466,16 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$ndws_min, 2), round(limits$ndws_max, 2)), 
-                           guide = guide_colourbar(barwidth = 12, 
-                                                   label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, 
+                                                   label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_f}_past_S{semester}.png') , width = 8, height = 5.5)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_f}_past_S{semester}.png') , width = 10, height = 10)
     
     # =------------
     
@@ -434,15 +486,15 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = c(round(limits$ndws_min, 2), round(limits$ndws_max, 2)), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_future_S{semester}.png') , width = 8, height = 5.5)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/{index_e}_future_S{semester}.png') , width = 10, height = 10)
     
     
     
@@ -452,25 +504,22 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_f}_S{semester}.png') , width = 8, height = 5.5)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_f}_S{semester}.png') , width = 10, height = 10)
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_f}_{semester}.png') , width=15.5,height=6.5,units="in", res = 300)
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_f}_{semester}.png') , width=28,height=10,units="in", res = 300)
     print(gridExtra::grid.arrange(f, f1, f_d, ncol=3,  
                                   top = glue::glue('{Country}, {county}\nS:{semester}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
     dev.off()
-    
-    
-    
     
     return(median_data)}
   
@@ -508,6 +557,15 @@ for(i in 1:length(count_i)){
       
     }else if(Big == 'B'){
       # =---------------------------------------------------------
+      
+      data_split <- data_split %>% filter(time == 'future') %>% 
+        group_by(id, ISO3, county, Country, x, y, time, Big, gSeason) %>% 
+        summarise_all(mean) %>% 
+        mutate_at(.vars =  vars(SLGP, LGP), .funs = function(x){round(x, 0)}) %>% 
+        ungroup() %>% 
+        bind_rows(filter(data_split, time == 'past'), .)
+      
+      
       # gSeason...
       gSeason_i <- data_split %>% dplyr::select( time, x, y, gSeason) %>%
         group_by( time, x, y) %>% summarise(gSeason = max(gSeason, na.rm =  TRUE)) %>%
@@ -531,23 +589,23 @@ for(i in 1:length(count_i)){
     limits_gs <- dplyr::select(gSeason_i, gSeason) %>% summarise_all(.funs = c('min', 'max'))
     
     # # Primero dejar? hechos los de presente... luego repito los de futuro...
-    gs <-  ggplot() +
+    gs <- ggplot() +
       geom_tile(data = filter(gSeason_i, time == 'past'), aes(x = x, y = y, fill = gSeason)) +
       geom_sf(data = pais, fill = NA, color = gray(.8)) +
       geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('gSeason\n(day)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = as.integer(limits_gs), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/gSeason_past.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/gSeason_past.png') , width = 10, height = 10, dpi = 300)
     
     # # =- Futuro.
     gs_f <- ggplot() +
@@ -557,15 +615,15 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('gSeason\n(day)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
       scale_fill_viridis_c(limits = as.integer(limits_gs), 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/gSeason_future.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/gSeason_future.png') , width = 10, height = 10, dpi = 300)
     
     # =--------
     gSeason_dif <- gSeason_i %>% pivot_wider(names_from = time, values_from = gSeason) %>%
@@ -578,18 +636,18 @@ for(i in 1:length(count_i)){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('gSeason\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
       scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                           guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                           guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                         legend.title=element_text(size=15), 
+      theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                         legend.title=element_text(size=35), 
                          legend.spacing = unit(5, units = 'cm'),
                          legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
     
-    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_gSeason.png') , width = 8, height = 5.5, dpi = 300)
+    ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_gSeason.png') , width = 10, height = 10, dpi = 300)
     
     
-    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_gSeason.png'), width=15.5,height=6.5,units="in", res = 300)
+    png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_gSeason.png'), width=28,height=10,units="in", res = 300)
     print(gridExtra::grid.arrange(gs, gs_f, c, ncol=3,  
                                   top = glue::glue('{Country}, {county}',
                                                    bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -623,15 +681,15 @@ for(i in 1:length(count_i)){
              title = glue::glue('gSeason = {i}; Historic'),
              x = 'Longitude', y = 'Latitude') +
         scale_fill_viridis_c(limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
-                             guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                             guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                           legend.title=element_text(size=15), 
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                           legend.title=element_text(size=35), 
                            legend.spacing = unit(5, units = 'cm'),
                            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
-      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/SLGP_past_{i}.png') , width = 8, height = 4, dpi = 300)
+      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/SLGP_past_{i}.png') , width = 10, height = 10, dpi = 300)
       
       
       
@@ -644,16 +702,16 @@ for(i in 1:length(count_i)){
         labs(fill = glue::glue('SLGP\n(Day of\nthe year)  '), 
              title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
         scale_fill_viridis_c(limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
-                             guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                             guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                           legend.title=element_text(size=15), 
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                           legend.title=element_text(size=35), 
                            legend.spacing = unit(5, units = 'cm'),
                            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
       
-      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/SLGP_future_{i}.png') , width = 8, height = 4, dpi = 300)
+      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/SLGP_future_{i}.png') , width = 10, height = 10, dpi = 300)
       
       
       d <- ggplot() +
@@ -665,18 +723,18 @@ for(i in 1:length(count_i)){
         labs(fill = glue::glue('SLGP\n(days)  '), 
              title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
         scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                             guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                             guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                           legend.title=element_text(size=15), 
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                           legend.title=element_text(size=35), 
                            legend.spacing = unit(5, units = 'cm'),
                            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
-      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_SLGP_{i}.png') , width = 8, height = 4, dpi = 300)
+      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_SLGP_{i}.png') , width = 10, height = 10, dpi = 300)
       
       
-      png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_SLGP_{i}.png') , width=15.5,height=6.5,units="in", res = 300)
+      png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_SLGP_{i}.png') , width=28,height=10,units="in", res = 300)
       print(gridExtra::grid.arrange(SLGP_p_1, SLGP_f_1, d, ncol=3,  
                                     top = glue::glue('{Country}, {county}',
                                                      bottom =   "Data source: Alliance Bioversity-CIAT")))
@@ -702,15 +760,15 @@ for(i in 1:length(count_i)){
         labs(fill = glue::glue('LGP\n(days)  '), 
              title = glue::glue('gSeason = {i}; Historic'),x = 'Longitude', y = 'Latitude') +
         scale_fill_viridis_c(limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
-                             guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                             guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                           legend.title=element_text(size=15), 
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                           legend.title=element_text(size=35), 
                            legend.spacing = unit(5, units = 'cm'),
                            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
-      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/LGP_past_{i}.png') , width = 8, height = 4, dpi = 300)
+      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/LGP_past_{i}.png') , width = 10, height = 10, dpi = 300)
       
       
       LGP_f <- ggplot(filter(two_index %>% mutate(gSeason = glue::glue('gSeason = {gSeason}')),
@@ -722,15 +780,15 @@ for(i in 1:length(count_i)){
         labs(fill = glue::glue('LGP\n(days)  '), 
              title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
         scale_fill_viridis_c(limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
-                             guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                             guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                           legend.title=element_text(size=15), 
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                           legend.title=element_text(size=35), 
                            legend.spacing = unit(5, units = 'cm'),
                            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
-      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/LGP_future_{i}.png') , width = 8, height = 4, dpi = 300)
+      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/LGP_future_{i}.png') , width = 10, height = 10, dpi = 300)
       
       
       
@@ -742,17 +800,17 @@ for(i in 1:length(count_i)){
         labs(fill = glue::glue('LGP\n(days)  '), 
              title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
         scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
-                             guide = guide_colourbar(barwidth = 12, label.theme = element_text(angle = 25, size = 15))) +
+                             guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
         scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
         scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
-        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=15), 
-                           legend.title=element_text(size=15), 
+        theme_bw() + theme(legend.position = 'bottom', text = element_text(size=35), 
+                           legend.title=element_text(size=35), 
                            legend.spacing = unit(5, units = 'cm'),
                            legend.spacing.x = unit(1.0, 'cm'), plot.title = element_text(hjust = 0.5)) 
       
-      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_LGP_{i}.png') , width = 8, height = 4, dpi = 300)
+      ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_LGP_{i}.png') , width = 10, height = 10, dpi = 300)
       
-      png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_LGP_{i}.png') , width=15.5,height=6.5,units="in", res = 300)
+      png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_LGP_{i}.png') , width=28,height=10,units="in", res = 300)
       print(gridExtra::grid.arrange(LGP_p, LGP_f, e, ncol=3,  
                                     top = glue::glue('{Country}, {county}',
                                                      bottom =   "Data source: Alliance Bioversity-CIAT")))
