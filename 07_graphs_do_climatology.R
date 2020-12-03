@@ -88,7 +88,7 @@ do_climatology <- function(country = 'Kenya',
     ggplot2::ylab('Precipitation (mm)') +
     ggplot2::xlim(0,13)+
     ggplot2::theme_bw() +
-    ggplot2::scale_x_continuous(breaks = 1:12) +
+    ggplot2::scale_x_continuous(breaks = 1:12)  +
     ggplot2::geom_line(aes(x = Month, y = Tmin*rlc, colour = 'blue'), size = 1.2) +
     ggplot2::geom_line(aes(x = Month, y = Tmax*rlc, colour = 'red'), size = 1.2) +
     #ggplot2::scale_color_identity(guide = 'legend') +
@@ -100,8 +100,8 @@ do_climatology <- function(country = 'Kenya',
                    plot.subtitle   = element_text(size = 17),
                    strip.text.x    = element_text(size = 17),
                    legend.position = "top") +
-    ggplot2::scale_y_continuous(sec.axis = sec_axis(~./rlc, name = 'Temperature ºC')) +
-    ggplot2::scale_colour_discrete(name = "", labels = c("Tmin", "Tmax"))
+    ggplot2::scale_y_continuous(sec.axis = sec_axis(~./rlc, name = expression(atop('Temperature('*~degree*C*')')))) +
+    ggplot2::scale_colour_manual(name = "", labels = c("Tmin", "Tmax"), values = c("#00ace6", "#b30000")) 
   
   if(!seasons){
     
@@ -212,15 +212,26 @@ do_climatology <- function(country = 'Kenya',
                                 alpha =.3,
                                 fill  = "forestgreen")
           } else {
-            colors_vct <- c('forestgreen','#b37b53')
-            plt <- plt +
-              ggplot2::annotate("rect",
-                                xmin  = manual[[i]][1]-.5,
-                                xmax  = manual[[i]][length(manual[[i]])]+.5,
-                                ymin  = -Inf,
-                                ymax  = Inf,
-                                alpha =.3,
-                                fill  = colors_vct[i])
+            
+            
+            if(length(manual) == 1){
+              
+              plt <- plt + 
+                geom_vline(xintercept = manual[[i]][1]-.5, colour = 'forestgreen', size=1) + 
+                geom_vline(xintercept = manual[[i]][length(manual[[i]])]+.5,  colour = 'forestgreen', size=1)
+              
+              
+            }else{
+              colors_vct <- c('forestgreen','#b37b53')
+              plt <- plt +
+                ggplot2::annotate("rect",
+                                  xmin  = manual[[i]][1]-.5,
+                                  xmax  = manual[[i]][length(manual[[i]])]+.5,
+                                  ymin  = -Inf,
+                                  ymax  = Inf,
+                                  alpha =.3,
+                                  fill  = colors_vct[i])
+            }
           }
         }
       }
@@ -240,11 +251,11 @@ do_climatology <- function(country = 'Kenya',
 #                auto    = NULL)  # Should be NULL
 
 # # Manual seasons
-# do_climatology(country = 'Senegal',
-#                county  = 'Kaffrine',
-#                seasons = TRUE,           # Should be TRUE
-#                manual  = list(s1 = 6:9), # Should be something like e.g. list(s1 = c(11:12,1:4)
-#                auto    = NULL)           # Should be NULL
+do_climatology(country = 'Burkina_Faso',
+               county  = 'Sud-Ouest',
+               seasons = TRUE,           # Should be TRUE
+               manual  = list(s1 = 4:10), # Should be something like e.g. list(s1 = c(11:12,1:4)
+               auto    = NULL)           # Should be NULL
 
 # # Auto seasons
 # do_climatology(country = 'Kenya',
