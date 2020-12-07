@@ -20,12 +20,46 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
   alt <- raster::getData('alt', country = iso3, path = paste0(root,'/data/shps/',country))
   adm <- raster::getData('GADM', country = iso3, level = 2, path = paste0(root,'/data/shps/',country))
+  adm@data$NAME_1 <- iconv(adm@data$NAME_1,from="UTF-8",to="ASCII//TRANSLIT")
+  adm@data$NAME_1 <- case_when(adm@data$NAME_1 == 'Trans Nzoia' ~ 'Trans-Nzoia',
+                               adm@data$NAME_1 == "Murang'a" ~ 'Muranga', 
+                               TRUE ~ adm@data$NAME_1)
   if(county == 'Muranga'){
     adm$NAME_1[grep(pattern = 'Murang', x = adm$NAME_1)] <- county
   }
   if(county == 'Trans-Nzoia'){
     adm$NAME_1[grep(pattern = 'Trans Nzoia', x = adm$NAME_1)] <- county
   }
+  if(country == 'Malawi'){
+    
+    mlw_t <- c('Dedza','Dowa','Kasungu','Lilongwe','Mchinji','Nkhotakota','Ntcheu','Ntchisi','Salima')
+    ply_t <- which(adm$NAME_1 %in% mlw_t)
+    
+    adm$NAME_2 =  adm$NAME_1
+    adm$NAME_1[ply_t] <- "Central Region"
+    trat <- adm %>% sf::st_as_sf()
+    trat_1 <- trat %>% group_by(NAME_1, NAME_2) %>%
+      summarise(geometry = sf::st_union(geometry)) %>% ungroup()
+    
+    adm <- trat_1 %>% as_Spatial()
+    
+  }
+  if(country == 'Tunisia'){
+    
+    NW <- c('Béja', 'Le Kef', 'Siliana', 'Jendouba')
+    Pos_NW <- which(adm$NAME_1 %in% NW)
+    CW <- c('Sidi Bou Zid', 'Kairouan', 'Kassérine')
+    Pos_CW <- which(adm$NAME_1 %in% CW)
+    
+    adm$NAME_2 =  adm$NAME_1
+    adm$NAME_1[Pos_NW] <- "North West"
+    adm$NAME_1[Pos_CW] <- "Central West"
+    
+    
+    
+  }
+  
+  
   adm_c <- adm[adm$NAME_1 == county,]
   
   alt_c <- alt %>% raster::crop(., adm_c) %>% raster::mask(., adm_c)
@@ -37,7 +71,7 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
   # tmap_save(pp, paste0(root,'/results/',country,'/graphs/',tolower(county),'/',tolower(county),'_elevation.png'), width = 10, height = 10, units = "in", dpi = 300)
   
-  alt_c <- alt_c %>% rasterToPoints() %>% as_tibble()
+  alt_c <- alt_c %>% rasterToPoints() %>% as_tibble() 
   xlims <- sf::st_bbox(adm_c)[c(1, 3)]
   ylims <- sf::st_bbox(adm_c)[c(2, 4)]
   adm_c <- adm_c %>% sf::st_as_sf()
@@ -54,8 +88,8 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   glwd2 <- glwd2 %>% sf::st_as_sf()
   
   
-  pp <- ggplot() +
-    geom_tile(data = alt_c, aes(x = x, y = y, fill = BFA_msk_alt )) +
+  pp <-  ggplot() +
+    geom_tile(data = alt_c %>% setNames(c('x', 'y', 'alt')), aes(x = x, y = y, fill =  alt)) +
     geom_sf(data = adm_c, fill = NA, color = gray(.2)) +
     geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
@@ -82,8 +116,9 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
 }
 
-cnty_list <- c('Sud-Ouest')
+cnty_list <- c('North West',
+               'Central West')
 for(i in 1:length(cnty_list))
 {
-  getAltitude(iso3 = 'BFA', country = 'Burkina_Faso', county = cnty_list[i])
+  getAltitude(iso3 = 'TUN', country = 'Tunisia', county = cnty_list[i])
 }
