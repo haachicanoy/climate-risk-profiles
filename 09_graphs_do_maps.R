@@ -243,9 +243,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_a}_{semester}.png'), width=28,height=10,units="in", res = 300) # width = 1580, height = 720,
-    print(gridExtra::grid.arrange(a, a1, a_d, ncol=3,  
-                                  top = glue::glue('{Country}, {county}\nS:{semester}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(a, a1, a_d, ncol=3))
     dev.off()
     
     
@@ -313,9 +311,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_c}_{semester}.png') , width=28,height=10,units="in", res = 300)
-    print(gridExtra::grid.arrange(c, c1, c_d, ncol=3,  
-                                  top = glue::glue('{Country}, {county}\nS:{semester}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(c, c1, c_d, ncol=3))
     dev.off()
     
     
@@ -383,9 +379,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_d}_{semester}.png') , width=28,height=10,units="in", res = 300)
-    print(gridExtra::grid.arrange(d, d1, d_d, ncol=3,  
-                                  top = glue::glue('{Country}, {county}\nS:{semester}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(d, d1, d_d, ncol=3))
     dev.off()
     
     
@@ -449,9 +443,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_e}_{semester}.png') , width=28,height=10,units="in", res = 300)
-    print(gridExtra::grid.arrange(e, e1, e_d, ncol=3,  
-                                  top = glue::glue('{Country}, {county}\nS:{semester}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(e, e1, e_d, ncol=3))
     dev.off()
     
     
@@ -516,9 +508,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/Dif_{index_f}_{semester}.png') , width=28,height=10,units="in", res = 300)
-    print(gridExtra::grid.arrange(f, f1, f_d, ncol=3,  
-                                  top = glue::glue('{Country}, {county}\nS:{semester}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(f, f1, f_d, ncol=3))
     dev.off()
     
     return(median_data)}
@@ -648,9 +638,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_gSeason.png'), width=28,height=10,units="in", res = 300)
-    print(gridExtra::grid.arrange(gs, gs_f, c, ncol=3,  
-                                  top = glue::glue('{Country}, {county}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(gs, gs_f, c, ncol=3))
     dev.off()
     
     
@@ -735,9 +723,8 @@ for(i in 1:length(count_i)){
       
       
       png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_SLGP_{i}.png') , width=28,height=10,units="in", res = 300)
-      print(gridExtra::grid.arrange(SLGP_p_1, SLGP_f_1, d, ncol=3,  
-                                    top = glue::glue('{Country}, {county}',
-                                                     bottom =   "Data source: Alliance Bioversity-CIAT")))
+      print(gridExtra::grid.arrange(SLGP_p_1, SLGP_f_1, d, ncol=3))
+      
       dev.off()
     }
     
@@ -811,9 +798,7 @@ for(i in 1:length(count_i)){
       ggsave(glue::glue('{path}{Country}/graphs/{county}/maps/Dif_LGP_{i}.png') , width = 10, height = 10, dpi = 300)
       
       png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/all_LGP_{i}.png') , width=28,height=10,units="in", res = 300)
-      print(gridExtra::grid.arrange(LGP_p, LGP_f, e, ncol=3,  
-                                    top = glue::glue('{Country}, {county}',
-                                                     bottom =   "Data source: Alliance Bioversity-CIAT")))
+      print(gridExtra::grid.arrange(LGP_p, LGP_f, e, ncol=3))
       dev.off()
       
     }
@@ -877,9 +862,7 @@ for(i in 1:length(count_i)){
     
     
     png(filename = glue::glue('{path}{Country}/graphs/{county}/maps/A_Multi_Anual.png'), width=20,height=10,units="in", res = 300)
-    print(gridExtra::grid.arrange(prec, tmn, ncol=2,
-                                  top = glue::glue('{Country}, {county}',
-                                                   bottom =   "Data source: Alliance Bioversity-CIAT")))
+    print(gridExtra::grid.arrange(prec, tmn, ncol=2))
     dev.off()
   }
   
