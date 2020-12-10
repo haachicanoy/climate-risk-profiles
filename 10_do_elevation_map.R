@@ -44,19 +44,39 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
     adm <- trat_1 %>% as_Spatial()
     
   }
+  if(country %in% c('Kenya', 'Ghana')){
+    
+    adm <- adm %>% sf::st_as_sf()
+    adm$NAME_2 =  adm$NAME_1
+    
+    adm <-  adm %>% group_by(NAME_1, NAME_2) %>%
+      summarise(geometry = sf::st_union(geometry)) %>% ungroup() %>% as_Spatial()
+    
+  }
   if(country == 'Tunisia'){
     
-    NW <- c('Béja', 'Le Kef', 'Siliana', 'Jendouba')
+    NW <- c('Beja', 'Le Kef', 'Siliana', 'Jendouba')
     Pos_NW <- which(adm$NAME_1 %in% NW)
-    CW <- c('Sidi Bou Zid', 'Kairouan', 'Kassérine')
+    CW <- c('Sidi Bou Zid', 'Kairouan', 'Kasserine')
     Pos_CW <- which(adm$NAME_1 %in% CW)
     
     adm$NAME_2 =  adm$NAME_1
     adm$NAME_1[Pos_NW] <- "North West"
     adm$NAME_1[Pos_CW] <- "Central West"
     
+    trat <- adm %>% sf::st_as_sf()
+    trat_1 <- trat %>% group_by(NAME_1, NAME_2) %>%
+      summarise(geometry = sf::st_union(geometry)) %>% ungroup()
     
+    adm <- trat_1 %>% as_Spatial()
+  }
+  if(country == 'Vietnam'){
+    adm <- readRDS("//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/data/shps/shps_from_R/Vietnam/gadm36_VNM_1_sp.rds")
     
+    adm$NAME_2 =  adm$NAME_1
+  }
+  if(country == 'Ethiopia'){
+    adm$NAME_1 =  adm$NAME_2
   }
   
   
@@ -116,9 +136,11 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
 }
 
-cnty_list <- c('North West',
-               'Central West')
+cnty_list <- c('Brong Ahafo',
+               'Ashanti',
+               'Eastern',
+               'Volta')
 for(i in 1:length(cnty_list))
 {
-  getAltitude(iso3 = 'TUN', country = 'Tunisia', county = cnty_list[i])
+  getAltitude(iso3 = 'GHA', country = 'Ghana', county = cnty_list[i])
 }
