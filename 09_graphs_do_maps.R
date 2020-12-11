@@ -17,9 +17,11 @@ suppressMessages(pacman::p_load(tidyr, dplyr, tibble, ggplot2, raster, ncdf4, sf
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Burkina_Faso'
-count_i  <-    c('Sud-Ouest')
-iso3c <- 'BFA'
+country <- 'India'
+count_i  <-  c('Karnataka',
+               'Maharashtra',
+               'Himachal Pradesh')
+iso3c <- 'IND'
 Big <- 'B'
 adm_lvl <- 1
 
@@ -49,6 +51,8 @@ for(i in 1:length(count_i)){
     shp@data$NAME_1 <- case_when(shp@data$NAME_1 == 'Trans Nzoia' ~ 'Trans-Nzoia',
                                  shp@data$NAME_1 == "Murang'a" ~ 'Muranga', 
                                  TRUE ~ shp@data$NAME_1)
+    
+    if(iso3c == 'ETH'){country1$NAME_1 = country1$NAME_2; shp$NAME_1 = shp$NAME_2}else{print('ok')}
     shp <- shp[shp@data$NAME_1 %in% C_shp,]
     plot(shp)
     shp@data$ISO <- iso3c
@@ -135,10 +139,16 @@ for(i in 1:length(count_i)){
       mutate(iso = map_world$ISO3, name =  iconv(map_world$NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>%
       mutate(Initals = substr(name, start = 1, stop = 3))
     
-    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
-      mutate( name = shp_sf$NAME_1) %>%
-      mutate(Initals = substr(name, start = 1, stop = 3))
     
+    if(ISO3 == 'IND'){
+      af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+        mutate( name = shp_sf$ST_NM) %>%
+        mutate(Initals = substr(name, start = 1, stop = 3))
+    }else{
+      af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+        mutate( name = shp_sf$NAME_1) %>%
+        mutate(Initals = substr(name, start = 1, stop = 3))
+    }
     
     glwd1 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_1.shp' ) 
     crs(glwd1) <- crs(map_world)
