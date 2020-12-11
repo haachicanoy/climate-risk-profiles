@@ -16,12 +16,14 @@ suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate,
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Tunisia';
-county <- c('North West',
-            'Central West')
-adm_lvl <- 1
-iso3c <- 'TUN'
+country <- 'Kenya';
+county <- c('Siaya',
+            'Bungoma',
+            'Kakamega',
+            'Nyandarua')
+iso3c <- 'KEN'
 Big <- 'N'
+adm_lvl <- 1 
 
 # =---------------------------------------------------
 # Ruta Principal para guardados: 
@@ -113,9 +115,15 @@ Clim_graph <- function(historic){
     dplyr::summarise_all(~round(. , 1))
   # =--------------------------------------------------------
   # Texto...
-  af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
-    mutate( name = shp_sf$NAME_1) %>%
-    mutate(Initals = substr(name, start = 1, stop = 3))
+  if(ISO3 == 'IND'){
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$ST_NM) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+  }else{
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$NAME_1) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+  }
   
   # =-------------------------------------------------------------------------------
   pos <- which(map_world$ISO3 == iso3c)
@@ -288,9 +296,15 @@ do_clim_Country <- function(data_split){
     sf::st_as_sf()
   #===---------------------------------------------------------
   #=------------------------------------------------------------
-  af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
-    mutate(Initals = shp_sf$NAME_1) %>% 
-    mutate(Initals = substr(Initals, start = 1, stop = 3))
+  if(ISO3 == 'IND'){
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$ST_NM) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+  }else{
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$NAME_1) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+  }
   
   #===---------------------------------------------------------
   #=------------------------------------------------------------
@@ -766,9 +780,15 @@ do_srad_country <- function(data_split){
     sf::st_as_sf()
   
   # Texto... 
-  af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
-    mutate(Initals = shp_sf$NAME_1) %>% 
-    mutate(Initals = substr(Initals, start = 1, stop = 3))
+  if(ISO3 == 'IND'){
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$ST_NM) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+  }else{
+    af <- as_tibble(st_centroid(shp_sf) %>% st_coordinates()) %>%
+      mutate( name = shp_sf$NAME_1) %>%
+      mutate(Initals = substr(name, start = 1, stop = 3))
+  }
   
   if(Big =='N'){
     # =----------------------------------------------------------------------
