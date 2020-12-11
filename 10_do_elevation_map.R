@@ -19,7 +19,13 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
 {
   
   alt <- raster::getData('alt', country = iso3, path = paste0(root,'/data/shps/',country))
-  adm <- raster::getData('GADM', country = iso3, level = 2, path = paste0(root,'/data/shps/',country))
+  if(country == 'India'){
+    adm <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
+    adm$NAME_1 =  adm$ST_NM; adm$NAME_2 = adm$ST_NM
+    
+  }else{
+    adm <- raster::getData('GADM', country = iso3, level = 2, path = paste0(root,'/data/shps/',country))
+  }
   adm@data$NAME_1 <- iconv(adm@data$NAME_1,from="UTF-8",to="ASCII//TRANSLIT")
   adm@data$NAME_1 <- case_when(adm@data$NAME_1 == 'Trans Nzoia' ~ 'Trans-Nzoia',
                                adm@data$NAME_1 == "Murang'a" ~ 'Muranga', 
@@ -81,7 +87,6 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
   
   adm_c <- adm[adm$NAME_1 == county,]
-  
   alt_c <- alt %>% raster::crop(., adm_c) %>% raster::mask(., adm_c)
   
   # pp <- tm_shape(alt_c) + tm_raster(title = "Elevation(m)", palette = terrain.colors(50), style="cont",
@@ -136,11 +141,10 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
 }
 
-cnty_list <- c('Brong Ahafo',
-               'Ashanti',
-               'Eastern',
-               'Volta')
+cnty_list <- c('Karnataka',
+               'Maharashtra',
+               'Himachal Pradesh')
 for(i in 1:length(cnty_list))
 {
-  getAltitude(iso3 = 'GHA', country = 'Ghana', county = cnty_list[i])
+  getAltitude(iso3 = 'IND', country = 'India', county = cnty_list[i])
 }
