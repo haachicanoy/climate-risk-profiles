@@ -17,11 +17,11 @@ suppressMessages(pacman::p_load(tidyr, dplyr, tibble, ggplot2, raster, ncdf4, sf
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'India'
-count_i  <-  c('Karnataka',
-               'Maharashtra',
-               'Himachal Pradesh')
-iso3c <- 'IND'
+country <- 'Ivory_Coast'
+count_i  <-  c('Bas-Sassandra',
+               'Lagunes',
+               'Comoe')
+iso3c <- 'CIV'
 Big <- 'B'
 adm_lvl <- 1
 
@@ -949,10 +949,26 @@ for(i in 1:length(count_i)){
     do_srad_maps(data_split = index_complete)
     
   }else if(Big == 'B'){
+    # Solo para los paises con correcciones
+    # tfm_s <- function(data){
+    #   pt <- arrange(data, x, y) %>% rename(longitude = 'x', latitude = 'y', tn = 'id')
+    #   crd_mod <- arrange(crd, x, y) %>% rename(longitude = 'x', latitude = 'y') %>% dplyr::select(longitude, latitude,id)
+    #   
+    #   
+    #   ps_mod <- fuzzyjoin::geo_inner_join(crd_mod, pt )
+    #   ps_mod <- ps_mod %>% dplyr::select(-longitude.y, -latitude.y) %>%
+    #     rename(x =  'longitude.x' , y = 'latitude.x' ) %>%
+    #     dplyr::mutate(cat = case_when(id == tn ~ 'Ok', id != tn ~ 'alert',
+    #                                   is.na(tn) ~ 'refill', is.na(id) ~ 'never' , TRUE ~ 'never')) %>%
+    #     dplyr::mutate(id = case_when(cat == 'Ok'~ tn, cat == 'Ok'~ id, TRUE ~ id)) %>%
+    #     dplyr::select(-tn, -cat)
+    #   
+    #   return(ps_mod)}
+    
     # Si... se tienen los idw.
     past_c <- fst::fst(glue::glue('{path}{country}/past/{county}_1985_2015_idw.fst')) %>%
       as_tibble() %>%
-      mutate(time = 'past')
+      mutate(time = 'past')  #%>% tfm_s(.)
     
     futDir  <- paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
     fut_fls <- list.files(futDir, pattern = paste0('^',county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_idw.fst'), recursive = T)
@@ -960,6 +976,7 @@ for(i in 1:length(count_i)){
     
     future_c  <- fut_fls %>%
       purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% mutate(time = 'future'); return(df)}) %>%
+      # purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% mutate(time = 'future') %>%  tfm_s(.); return(df)}) %>%
       dplyr::bind_rows()
     
     
