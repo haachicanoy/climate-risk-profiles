@@ -16,13 +16,13 @@ suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate,
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'Kenya';
-county <- c('Siaya',
-            'Bungoma',
-            'Kakamega',
-            'Nyandarua')
-iso3c <- 'KEN'
-Big <- 'N'
+country <- 'India';
+county <- c('Karnataka',
+            'Maharashtra',
+            'Andhra Pradesh',
+            'Himachal Pradesh')
+iso3c <- 'IND'
+Big <- 'B'
 adm_lvl <- 1 
 
 # =---------------------------------------------------
@@ -1154,6 +1154,21 @@ do_srad_country <- function(data_split){
 # =---------------------------------------------------------------------------------------
 # =--------------------------------------
 # =-------------------------------------
+# Solo para los paises con correcciones
+# tfm_s <- function(data){
+#   pt <- arrange(data, x, y) %>% rename(longitude = 'x', latitude = 'y', tn = 'id')
+#   crd_mod <- arrange(crd, x, y) %>% rename(longitude = 'x', latitude = 'y') %>% dplyr::select(longitude, latitude,id)
+#   
+#   
+#   ps_mod <- fuzzyjoin::geo_inner_join(crd_mod, pt )
+#   ps_mod <- ps_mod %>% dplyr::select(-longitude.y, -latitude.y) %>%
+#     rename(x =  'longitude.x' , y = 'latitude.x' ) %>%
+#     dplyr::mutate(cat = case_when(id == tn ~ 'Ok', id != tn ~ 'alert',
+#                                   is.na(tn) ~ 'refill', is.na(id) ~ 'never' , TRUE ~ 'never')) %>%
+#     dplyr::mutate(id = case_when(cat == 'Ok'~ tn, cat == 'Ok'~ id, TRUE ~ id)) %>%
+#     dplyr::select(-tn, -cat)
+#   
+#   return(ps_mod)}
 
 # Optimization in reading data. 
 ag <- all_climate %>% dplyr::select(-climate) %>% 
@@ -1185,7 +1200,7 @@ if(Big == 'N'){
     # Si... se tienen los idw. 
     past_c <- fst::fst(glue::glue('{path}/past/{z$county}_1985_2015_idw.fst')) %>%
       as_tibble() %>% 
-      dplyr::mutate(time = 'past') 
+      dplyr::mutate(time = 'past') #%>% tfm_s(.)
     
     futDir  <-  paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
     fut_fls <- list.files(futDir, pattern = paste0('^',z$county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_idw.fst'), recursive = T)
@@ -1193,6 +1208,7 @@ if(Big == 'N'){
     
     future_c  <- fut_fls %>%
       purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% dplyr::mutate(time = 'future'); return(df)}) %>%
+      # purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% mutate(time = 'future') %>%  tfm_s(.); return(df)}) %>%
       dplyr::bind_rows()
     
     data_c <- bind_rows(past_c, future_c) %>% dplyr::select(-x, -y)
