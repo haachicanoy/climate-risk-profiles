@@ -96,8 +96,7 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
             ggplot2::geom_ribbon(data = df_summ2 %>% dplyr::filter(Serie == 'Fut'), aes(ymin = CI_lower, ymax = CI_upper, fill = season), color = "grey70", alpha = 0.4) +
             ggplot2::geom_smooth(data = df_summ2, method = "loess", color = "blue", alpha = 0.8, se = FALSE) +
             ggplot2::labs(title    = tbl$Indices %>% unique,
-                          subtitle = paste0(country,", ",county),
-                          caption  = "Data source: Alliance Bioversity-CIAT") +
+                          subtitle = paste0(country,", ",county)) +
             ggplot2::theme_bw() +
             ggplot2::theme(axis.text       = element_text(size = 17),
                            axis.title      = element_text(size = 20),
@@ -160,8 +159,7 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
             ggplot2::geom_ribbon(data = df_summ2 %>% dplyr::filter(Serie == 'Fut'), aes(ymin = CI_lower, ymax = CI_upper, fill = gSeason), color = "grey70", alpha = 0.4) +
             ggplot2::geom_smooth(data = df_summ2, method = "loess", color = "blue", alpha = 0.8, se = FALSE) +
             ggplot2::labs(title    = tbl$Indices %>% unique,
-                          subtitle = paste0(country,", ",county),
-                          caption  = "Data source: Alliance Bioversity-CIAT") +
+                          subtitle = paste0(country,", ",county)) +
             ggplot2::theme_bw() +
             ggplot2::theme(axis.text       = element_text(size = 17),
                            axis.title      = element_text(size = 20),
@@ -187,48 +185,9 @@ time_series_plot <- function(country = 'Kenya', county = 'Vihiga'){
 
 
 # =--------------------------------------------------
-iso3c <- 'KEN'
-adm_lvl <- 1
-# Load county shapefile
-if(country == 'India'){
-  # India 
-  country1 <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
-  shp <- raster::shapefile(glue::glue('//dapadfs/workspace_cluster_8/climateriskprofiles/results/India/states/Admin2.shp'))
-  shp <- shp[shp@data$ST_NM %in% C_shp,]
-  plot(shp)
-  shp@data$ISO <- iso3c
-}else{
-  country1 <- readRDS(glue::glue('{root}/data/shps/shps_from_R/{country}/gadm36_{iso3c}_{adm_lvl}_sp.rds')) 
-  shp <- readRDS(glue::glue('{root}/data/shps/shps_from_R/{country}/gadm36_{iso3c}_{adm_lvl}_sp.rds')) 
-  shp@data$NAME_1 <- iconv(shp@data$NAME_1,from="UTF-8",to="ASCII//TRANSLIT")
-  shp@data$NAME_1 <- case_when(shp@data$NAME_1 == 'Trans Nzoia' ~ 'Trans-Nzoia',
-                               shp@data$NAME_1 == "Murang'a" ~ 'Muranga', 
-                               TRUE ~ shp@data$NAME_1)
-  shp <- shp[shp@data$NAME_1 %in% county,]
-  plot(shp)
-  shp@data$ISO <- iso3c
-}
-
-# Load id coords
-crd <- vroom('//dapadfs/workspace_cluster_8/climateriskprofiles/data/id_all_country.csv')
-crd <- crd %>%
-  dplyr::filter(Country == country)
-pnt <- crd %>% dplyr::select(x,y) %>% sp::SpatialPoints(coords = .)
-crs(pnt) <- crs(shp)
-# Filter coordinates that are present in the county
-pnt <- sp::over(pnt, shp) %>% data.frame %>% dplyr::select(ISO) %>% complete.cases() %>% which()
-crd <- crd[pnt,]
-crd <<- crd
-
-# =--------------------------------------------------
-
-
-
-
-
 
 country <- 'Kenya'
-count_i  <- c('Kakamega')
+count_i  <- c('Siaya', 'Bungoma', 'Kakamega', 'Nyandarua')
 
 for(i in 1:length(count_i)){
   time_series_plot(country = country, county = count_i[i])}
