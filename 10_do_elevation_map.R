@@ -7,7 +7,7 @@ options(warn = -1, scipen = 999)
 
 # Load libraries
 suppressMessages(library(pacman))
-suppressMessages(pacman::p_load(tidyverse, raster, tmap, fst))
+suppressMessages(pacman::p_load(tidyverse, raster, tmap, fst, sf))
 
 # Paths
 OSys <- Sys.info()[1]
@@ -15,7 +15,7 @@ root <<- switch(OSys,
                 'Linux'   = '/home/jovyan/work/cglabs',
                 'Windows' = '//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles')
 
-getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
+getAltitude <- function(iso3 = 'ETH', country = 'Ethiopia', county = 'Arsi')
 {
   
   alt <- raster::getData('alt', country = iso3, path = paste0(root,'/data/shps/',country))
@@ -99,21 +99,28 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   alt_c <- alt_c %>% rasterToPoints() %>% as_tibble() 
   xlims <- sf::st_bbox(adm_c)[c(1, 3)]
   ylims <- sf::st_bbox(adm_c)[c(2, 4)]
-  adm_c <- adm_c %>% sf::st_as_sf()
-  test <- as_tibble(st_centroid(adm_c) %>% st_coordinates())  %>%
-    mutate(name =  iconv(adm_c$NAME_2,from="UTF-8",to="ASCII//TRANSLIT")) 
+  adm_c <- adm_c %>% sf::st_as_sf() %>%
+    group_by(NAME_1) %>% summarise() 
   
+  test <- as_tibble(st_centroid(adm_c) %>% st_coordinates())  %>%
+    mutate(name =  iconv(adm_c$NAME_1,from="UTF-8",to="ASCII//TRANSLIT")) 
+  
+  # =------------------------------------------
   glwd1 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_1.shp' ) 
   crs(glwd1) <- crs(adm_c)
-  glwd1 <- glwd1 %>% sf::st_as_sf()
-  
+  glwd1 <-  rgeos::gSimplify(glwd1, tol = 0.05, topologyPreserve = TRUE)  %>%
+    sf::st_as_sf()
+  glwd1 <<-  glwd1
   
   glwd2 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_2.shp' ) 
   crs(glwd2) <- crs(adm_c)
-  glwd2 <- glwd2 %>% sf::st_as_sf()
+  glwd2 <- rgeos::gSimplify(glwd2, tol = 0.05, topologyPreserve = TRUE) %>%
+    sf::st_as_sf()
+  glwd2 <<- glwd2
+  # =------------------------------------------
   
   
-  pp <-  ggplot() +
+  pp <- ggplot() +
     geom_tile(data = alt_c %>% setNames(c('x', 'y', 'alt')), aes(x = x, y = y, fill =  alt)) +
     geom_sf(data = adm_c, fill = NA, color = gray(.2)) +
     geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
@@ -141,10 +148,11 @@ getAltitude <- function(iso3 = 'KEN', country = 'Kenya', county = 'Vihiga')
   
 }
 
-cnty_list <- c('Karnataka',
-               'Maharashtra',
-               'Himachal Pradesh')
+cnty_list <- c('Sikasso',
+               'Kayes',
+               'Segou',
+               'Mopti')
 for(i in 1:length(cnty_list))
 {
-  getAltitude(iso3 = 'IND', country = 'India', county = cnty_list[i])
+  getAltitude(iso3 = 'MLI', country = 'Mali', county = cnty_list[i])
 }
