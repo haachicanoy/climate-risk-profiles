@@ -16,12 +16,11 @@ suppressMessages(pacman::p_load(tidyverse, tibble, raster, ncdf4, sf, lubridate,
 # =----------------------------------
 # Identificacion de pixel para ETH
 # =----------------------------------
-country <- 'India';
-county <- c('Karnataka',
-            'Maharashtra',
-            'Andhra Pradesh',
-            'Himachal Pradesh')
-iso3c <- 'IND'
+country <- 'Ivory_Coast';
+county <- c('Bas-Sassandra' ,
+            'Lagunes' ,
+            'Comoe' )
+iso3c <- 'CIV'
 Big <- 'B'
 adm_lvl <- 1 
 
@@ -61,6 +60,21 @@ crs(pnt) <- crs(shp)
 pnt <- sp::over(pnt, shp) %>% data.frame %>% dplyr::select(ISO) %>% complete.cases() %>% which()
 crd <- crd[pnt,]
 crd <<- crd
+
+
+# =------------------------------------------
+glwd1 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_1.shp' ) 
+crs(glwd1) <- crs(shp)
+glwd1 <-  rgeos::gSimplify(glwd1, tol = 0.05, topologyPreserve = TRUE)  %>%
+  sf::st_as_sf()
+glwd1 <<-  glwd1
+
+glwd2 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_2.shp' ) 
+crs(glwd2) <- crs(shp)
+glwd2 <- rgeos::gSimplify(glwd2, tol = 0.05, topologyPreserve = TRUE) %>%
+  sf::st_as_sf()
+glwd2 <<- glwd2
+# =------------------------------------------
 
 
 
@@ -139,19 +153,12 @@ Clim_graph <- function(historic){
     mutate(Initals = substr(name, start = 1, stop = 3))
   
   
-  glwd1 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_1.shp' ) 
-  crs(glwd1) <- crs(map_world)
-  glwd1 <- glwd1 %>% sf::st_as_sf()
-  
-  
-  glwd2 <- raster::shapefile('//dapadfs/workspace_cluster_8/climateriskprofiles/data/shps/GLWD/glwd_2.shp' ) 
-  crs(glwd2) <- crs(map_world)
-  glwd2 <- glwd2 %>% sf::st_as_sf()
-  
-  
+  if(iso3c == 'IND'){
+    country <- country %>% mutate(NAME_0 = iso3c)  %>% group_by(NAME_0) %>% summarise() 
+  }else{  country <- country %>% group_by(NAME_0) %>% summarise() }
   
   # geom_label_repel(data=counties_spec, aes(x=lon, y=lat, label=name)) +
-  pais <-  ggplot() +
+  pais <- ggplot() +
     geom_sf(data = map_world, fill = NA, color = gray(.8)) +  
     geom_sf(data = country, fill = 'lightgray', color = gray(.1), alpha = 0.2) +
     geom_sf(data = shp_sf,fill = 'lightgray', color = gray(.1), alpha = 0.4) +
@@ -177,12 +184,19 @@ Clim_graph <- function(historic){
           legend.title=element_text(size=18))  + 
     guides(shape = guide_legend(ncol = 3))
   
-  ggsave(glue::glue('{path}/Country.png') , width = 10, height = 5.5)
+  ggsave(glue::glue('{path}/Country.png') , width = 10, height = 7.5)
   
   # =--------------------------------------------------------
   
+  my_limits <- c(round(min(historic$prec),2)-0.1, round(max(historic$prec),2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   prec <-  ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
     geom_tile(data = historic, aes(x = x, y = y, fill = prec )) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = country, fill = NA, color = gray(.8)) +
     geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
     coord_sf(xlim = xlims, ylim = ylims) +
@@ -191,7 +205,8 @@ Clim_graph <- function(historic){
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) +
-    scale_fill_gradientn(colours = blues9, 
+    scale_fill_gradientn(limits =  my_limits, 
+                         breaks = my_breaks, colours = blues9, 
                          guide = guide_colourbar(barwidth = 25, 
                                                  label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
@@ -205,13 +220,22 @@ Clim_graph <- function(historic){
   
   ##########################################################
   
+  my_limits <- c(round(min(historic$tmean),2)-0.1, round(max(historic$tmean),2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 1)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   tmn <-  ggplot() +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
     geom_tile(data = historic, aes(x = x, y = y, fill = tmean))+
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = country, fill = NA, color = gray(.8)) +
     geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = expression('('*~degree*C*')'), title = expression(atop('Historical Annual','Mean Temperature('*~degree*C*')')),x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradient(low = "yellow", high = "red",
+    scale_fill_gradient(limits =  my_limits, 
+                        breaks = my_breaks, 
+                        low = "yellow", high = "red",
                         guide = guide_colourbar(barwidth = 25,  
                                                 label.theme = element_text(angle = 25, size = 35)))+
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
@@ -306,6 +330,12 @@ do_clim_Country <- function(data_split){
       mutate(Initals = substr(name, start = 1, stop = 3))
   }
   
+  if(iso3c == 'IND'){
+    Country <- Country %>% mutate(NAME_0 = iso3c)  %>% group_by(NAME_0) %>% summarise() 
+  }else{
+    Country <- Country %>% group_by(NAME_0) %>% summarise() 
+  }
+  
   #===---------------------------------------------------------
   #=------------------------------------------------------------
   
@@ -313,19 +343,28 @@ do_clim_Country <- function(data_split){
   # Esta función va a quedar super manual.
   index_a <- 'CDD'
   
+  my_limits <- c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = CDD ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD )) 
   }
   a <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
-                              force = 10, 
-                              size = 8) + 
+                              force = 10,
+                              size = 8) +
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1), 
+    scale_fill_viridis_c(limits = my_limits, 
+                         breaks = my_breaks,
                          guide = guide_colourbar(barwidth = 20, 
                                                  label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
@@ -345,13 +384,17 @@ do_clim_Country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD_f )) 
   }
   a1 <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) +     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days)'), title = 'Future',x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$CDD_min,2)-0.1, round(limits$CDD_max,2)+0.1), 
+    scale_fill_viridis_c(limits = my_limits, 
+                         breaks = my_breaks, 
                          guide = guide_colourbar(barwidth = 20, 
                                                  label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
@@ -366,12 +409,22 @@ do_clim_Country <- function(data_split){
   
   
   # =- 
+  
+  my_limits <- c(round(min(median_data$CDD_c),2)-0.1, round(max(median_data$CDD_c), 2)+0.1) 
+  my_breaks <-round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = CDD_c ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = CDD_c )) 
   }
   a_d <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
@@ -379,6 +432,8 @@ do_clim_Country <- function(data_split){
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_a}\n(days) '), title = 'Change', x = 'Longitude', y = 'Latitude') +
     scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
+                         limits = my_limits,  
+                         breaks = my_breaks,
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -403,21 +458,27 @@ do_clim_Country <- function(data_split){
   #   # =---------------------------------------
   #   # Siguiente indice...
   index_c <- 'P5D'
+  my_limits <- c(round(limits$P5D_min,2)-0.1, round(limits$P5D_max,2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 1)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
   
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P5D ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P5D )) 
   }
   c <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_c}\n(mm) '), title = 'Historic',x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$P5D_min, 2)- 0.1, 
-                                    round(limits$P5D_max, 2)+0.1), 
+    scale_fill_viridis_c(limits = my_limits, 
+                         breaks = my_breaks, 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
@@ -434,16 +495,18 @@ do_clim_Country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P5D_f )) 
   }
   c1 <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_c}\n(mm)'), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$P5D_min, 2)- 0.1, 
-                                    round(limits$P5D_max, 2)+0.1), 
+    scale_fill_viridis_c(limits = my_limits, 
+                         breaks = my_breaks, 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -455,21 +518,32 @@ do_clim_Country <- function(data_split){
   
   ggsave(glue::glue('{path}/maps/{index_c}_future_S{semester}.png') , width = 10, height = 10)
   
+  
+  
   # =----
+  my_limits <- c(round(min(median_data$P5D_c),2)-0.1, round(max(median_data$P5D_c), 2)+0.1) 
+  my_breaks <-round(seq(my_limits[1], my_limits[2],  length.out= 3), 1)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P5D_c ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P5D_c )) 
   }
   c_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
-    # geom_sf(data = shp_sf, fill = NA, color = gray(.1)) + #  aes(colour = NAME_1)     
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) +  
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_c}\n(mm) '), title = 'Change', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
+    scale_fill_gradient2(limits = my_limits, 
+                         breaks = my_breaks,
+                         low = '#A50026', mid = 'white', high = '#000099', 
                          guide = guide_colourbar(barwidth = 20, 
                                                  label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
@@ -494,21 +568,29 @@ do_clim_Country <- function(data_split){
   # =------------
   index_d <- 'P95'
   
+  my_limits <- c(round(limits$P95_min,2)-0.1, round(limits$P95_max,2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 1)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P95 ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P95 )) 
   }
   
   d <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_d}\n(mm)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$P95_min,2)-0.1, 
-                                    round(limits$P95_max, 2)+0.1), 
+    scale_fill_viridis_c(limits = my_limits, 
+                         breaks = my_breaks, 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -526,15 +608,18 @@ do_clim_Country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P95_f )) 
   }
   d1 <- graph +  geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_d}\n(mm) '), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits =  c(round(limits$P95_min,2)-0.1, 
-                                     round(limits$P95_max, 2)+0.1), 
+    scale_fill_viridis_c(limits =  my_limits, 
+                         breaks = my_breaks, 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
@@ -548,19 +633,28 @@ do_clim_Country <- function(data_split){
   
   
   # =----
+  my_limits <- c(round(min(median_data$P95_c),2)-0.1, round(max(median_data$P95_c), 2)+0.1) 
+  my_breaks <-round(seq(my_limits[1], my_limits[2],  length.out= 3), 1)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = P95_c ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = P95_c )) 
   }
-  d_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+  d_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_d}\n(mm) '), title = 'Change', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
+    scale_fill_gradient2(limits =  my_limits, 
+                         breaks = my_breaks,
+                         low = '#A50026', mid = 'white', high = '#000099', 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
@@ -582,6 +676,9 @@ do_clim_Country <- function(data_split){
   #===---------------------------------------------------------
   #=------------------------------------------------------------
   index_e <- 'NT35'
+  my_limits <- c(round(limits$NT35_min,2)-0.1, round(limits$NT35_max,2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
   
   # =----
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = NT35 ))
@@ -589,14 +686,18 @@ do_clim_Country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = NT35 )) 
   }
   e <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) +  
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_e}\n(days)'), title = 'Historic', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
+    scale_fill_viridis_c(limits =  my_limits, 
+                         breaks = my_breaks,
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +    scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
     theme_bw() +
@@ -607,6 +708,7 @@ do_clim_Country <- function(data_split){
   
   ggsave(glue::glue('{path}/maps/{index_e}_past_S{semester}.png') , width = 10, height = 10)
   
+  
   # =------------
   # =----
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = NT35_f ))
@@ -614,14 +716,18 @@ do_clim_Country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = NT35_f )) 
   }
   e1 <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_e}\n(days)'), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$NT35_min, 2) - 0.1, round(limits$NT35_max, 2)+0.1), 
+    scale_fill_viridis_c(limits =  my_limits, 
+                         breaks = my_breaks,
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -635,19 +741,29 @@ do_clim_Country <- function(data_split){
   
   
   # =----
+  my_limits <- c(round(min(median_data$NT35_c),2)-0.1, round(max(median_data$NT35_c), 2)+0.1) 
+  my_breaks <-round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = NT35_c ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = NT35_c )) 
   }
   e_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_e}\n(days)'), title = 'Change', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
+    scale_fill_gradient2(limits =  my_limits, 
+                         breaks = my_breaks,
+                         low = '#000099', mid = 'white', high = '#A50026', 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -668,6 +784,9 @@ do_clim_Country <- function(data_split){
   #===---------------------------------------------------------
   #=------------------------------------------------------------
   index_f <- 'ndws'
+  my_limits <- c(round(limits$ndws_min,2)-0.1, round(limits$ndws_max,2)+0.1) 
+  my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
   
   # =----
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = ndws ))
@@ -676,14 +795,18 @@ do_clim_Country <- function(data_split){
   }
   
   f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Historic', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$ndws_min, 2), round(limits$ndws_max, 2)), 
+    scale_fill_viridis_c(limits =  my_limits, 
+                         breaks = my_breaks,
                          guide = guide_colourbar(barwidth = 20, 
                                                  label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
@@ -701,15 +824,19 @@ do_clim_Country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = ndws_f )) 
   }
   
-  f1 <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+  f1 <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) +  
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Future', x = 'Longitude', y = 'Latitude') +
-    scale_fill_viridis_c(limits = c(round(limits$ndws_min, 2), round(limits$ndws_max, 2)), 
+    scale_fill_viridis_c(limits =  my_limits, 
+                         breaks = my_breaks,
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -723,19 +850,29 @@ do_clim_Country <- function(data_split){
   
   
   # =----
+  my_limits <- c(round(min(median_data$ndws_c),2)-0.1, round(max(median_data$ndws_c), 2)+0.1) 
+  my_breaks <-round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+  my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+  
+  
   graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = ndws_c ))
   for(i in 2:length(county) ){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = ndws_c )) 
   }
   f_d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = Country, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
                               size = 8) + 
     coord_sf(xlim = xlims, ylim = ylims) +
     labs(fill = glue::glue('{index_f}\n(days)  '), title = 'Change', x = 'Longitude', y = 'Latitude') +
-    scale_fill_gradient2(low = '#000099', mid = 'white', high = '#A50026', 
+    scale_fill_gradient2(limits =  my_limits, 
+                         breaks = my_breaks,
+                         low = '#000099', mid = 'white', high = '#A50026', 
                          guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
     scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
     scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -789,6 +926,14 @@ do_srad_country <- function(data_split){
       mutate( name = shp_sf$NAME_1) %>%
       mutate(Initals = substr(name, start = 1, stop = 3))
   }
+  
+  
+  if(iso3c == 'IND'){
+    pais <- pais %>% mutate(NAME_0 = iso3c)  %>% group_by(NAME_0) %>% summarise() 
+  }else{
+    pais <- pais %>% group_by(NAME_0) %>% summarise() 
+  }
+  
   
   if(Big =='N'){
     # =----------------------------------------------------------------------
@@ -850,7 +995,10 @@ do_srad_country <- function(data_split){
   }
   
   gs <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = pais, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1)) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
@@ -877,8 +1025,11 @@ do_srad_country <- function(data_split){
     graph <- graph + geom_tile(data = median_data[median_data$county%in% county[i],] , aes(x = x, y = y, fill = gSeason )) 
   }
   
-  gs_f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+  gs_f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = pais, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
@@ -909,7 +1060,10 @@ do_srad_country <- function(data_split){
   }
   
   c <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+    geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
     geom_sf(data = pais, fill = NA, color = gray(.1)) +
+    geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
     ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                               arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                               force = 10, 
@@ -944,13 +1098,17 @@ do_srad_country <- function(data_split){
     pivot_wider(names_from = time, values_from = SLGP) %>%
     mutate(SLGP = future - past, gSeason = glue::glue('gSeason = {gSeason}'))
   
-  limits_two <-   two_index %>% group_by(gSeason) %>%
+  limits_two <-   two_index %>% group_by(gSeason) %>% drop_na() %>% 
     dplyr::select(SLGP, LGP) %>% summarise_all(.funs = c('min', 'max')) %>% 
     ungroup()
   
   gS <- unique(two_index$gSeason)
   
   for(i in gS){
+    
+    my_limits <- c(limits_two$SLGP_min[i], limits_two$SLGP_max[i])
+    my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+    my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
     
     median_data <- inner_join(filter(two_index %>% mutate(gSeason = glue::glue('gSeason = {gSeason}')),
                                      time == 'past', gSeason == glue::glue('gSeason = {i}')), m_coords)
@@ -960,7 +1118,10 @@ do_srad_country <- function(data_split){
     }
     
     SLGP_p_1 <-graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       geom_sf(data = pais, fill = NA, color = gray(.1)) +
+      geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
       ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                                 arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                                 force = 10, 
@@ -969,7 +1130,8 @@ do_srad_country <- function(data_split){
       labs(fill = glue::glue('SLGP\n(Day of\nthe year)  '), 
            title = glue::glue('gSeason = {i}; Historic'),
            x = 'Longitude', y = 'Latitude') +
-      scale_fill_viridis_c(limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
+      scale_fill_viridis_c(limits =  my_limits, 
+                           breaks = my_breaks,
                            guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -989,8 +1151,11 @@ do_srad_country <- function(data_split){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = SLGP)) 
     }
     
-    SLGP_f_1 <-graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    SLGP_f_1 <-graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       geom_sf(data = pais, fill = NA, color = gray(.1)) +
+      geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
       ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                                 arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                                 force = 10, 
@@ -998,7 +1163,8 @@ do_srad_country <- function(data_split){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('SLGP\n(Day of\nthe year)  '), 
            title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
-      scale_fill_viridis_c(limits = c(limits_two$SLGP_min[i], limits_two$SLGP_max[i]), 
+      scale_fill_viridis_c(limits =  my_limits, 
+                           breaks = my_breaks,
                            guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -1011,7 +1177,13 @@ do_srad_country <- function(data_split){
     
     ggsave(glue::glue('{path}/maps/SLGP_future_{i}.png') , width = 10, height = 10)
     
-    # =----
+    # =----------------
+    dt_MM <- filter(SLGP_dif, gSeason == glue::glue('gSeason = {i}'))$SLGP %>% na.omit()
+    
+    my_limits_MM <- c(min(dt_MM), max(dt_MM))
+    my_breaks_MM <- round(seq(my_limits_MM[1], my_limits_MM[2],  length.out= 3), 0)
+    my_limits_MM <- c(ifelse(my_limits_MM[1] > my_breaks_MM[1], my_breaks_MM[1], my_limits_MM[1]) ,ifelse(my_limits_MM[2] < my_breaks_MM[3], my_breaks_MM[3], my_limits_MM[2]))
+    
     median_data <- inner_join(filter(SLGP_dif, gSeason == glue::glue('gSeason = {i}')), m_coords)
     graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = SLGP))
     for(k in 2:length(county) ){
@@ -1019,7 +1191,10 @@ do_srad_country <- function(data_split){
     }
     
     d <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       geom_sf(data = pais, fill = NA, color = gray(.1)) +
+      geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
       ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                                 arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                                 force = 10, 
@@ -1027,7 +1202,9 @@ do_srad_country <- function(data_split){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('SLGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
-      scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
+      scale_fill_gradient2(limits = my_limits_MM, 
+                           breaks = my_breaks_MM,
+                           low = '#A50026', mid = 'white', high = '#000099', 
                            guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +      scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
       theme_bw() +
@@ -1054,6 +1231,12 @@ do_srad_country <- function(data_split){
     mutate(LGP = future - past, gSeason = glue::glue('gSeason = {gSeason}'))
   
   for(i in gS){
+    
+    my_limits <- c(limits_two$LGP_min[i], limits_two$LGP_max[i])
+    my_breaks <- round(seq(my_limits[1], my_limits[2],  length.out= 3), 0)
+    my_limits <- c(ifelse(my_limits[1] > my_breaks[1], my_breaks[1], my_limits[1]) ,ifelse(my_limits[2] < my_breaks[3], my_breaks[3], my_limits[2]))
+    
+    
     median_data <- inner_join(filter(two_index %>% mutate(gSeason = glue::glue('gSeason = {gSeason}')),
                                      time == 'past', gSeason == glue::glue('gSeason = {i}')), m_coords)
     graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = LGP))
@@ -1062,7 +1245,10 @@ do_srad_country <- function(data_split){
     }
     
     LGP_p <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       geom_sf(data = pais, fill = NA, color = gray(.1)) +
+      geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
       ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                                 arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                                 force = 10, 
@@ -1070,7 +1256,8 @@ do_srad_country <- function(data_split){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('LGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Historic'),x = 'Longitude', y = 'Latitude') +
-      scale_fill_viridis_c(limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
+      scale_fill_viridis_c(limits =  my_limits, 
+                           breaks = my_breaks,
                            guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -1091,7 +1278,10 @@ do_srad_country <- function(data_split){
     }
     
     LGP_f <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       geom_sf(data = pais, fill = NA, color = gray(.1)) +
+      geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
       ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                                 arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                                 force = 10, 
@@ -1099,7 +1289,8 @@ do_srad_country <- function(data_split){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('LGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Future'), x = 'Longitude', y = 'Latitude') +
-      scale_fill_viridis_c(limits = c(limits_two$LGP_min[i], limits_two$LGP_max[i]), 
+      scale_fill_viridis_c(limits =  my_limits, 
+                           breaks = my_breaks,
                            guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -1112,14 +1303,24 @@ do_srad_country <- function(data_split){
     ggsave(glue::glue('{path}/maps/LGP_future_{i}.png') , width = 10, height = 10)
     
     # =------
+    dt_MM <- filter(LGP_dif, gSeason == glue::glue('gSeason = {i}'))$LGP %>% na.omit()
+    
+    my_limits_MM <- c(min(dt_MM), max(dt_MM))
+    my_breaks_MM <- round(seq(my_limits_MM[1], my_limits_MM[2],  length.out= 3), 0)
+    my_limits_MM <- c(ifelse(my_limits_MM[1] > my_breaks_MM[1], my_breaks_MM[1], my_limits_MM[1]) ,ifelse(my_limits_MM[2] < my_breaks_MM[3], my_breaks_MM[3], my_limits_MM[2]))
+    
+    
     median_data <- inner_join(filter(LGP_dif, gSeason == glue::glue('gSeason = {i}')) , m_coords)
     graph <-  median_data[median_data$county%in% county[1],]  %>% ggplot(.) + geom_tile(aes(x = x, y = y, fill = LGP))
     for(k in 2:length(county) ){
       graph <- graph + geom_tile(data = median_data[median_data$county%in% county[k],] , aes(x = x, y = y, fill = LGP)) 
     }
     
-    e <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) + 
+    e <- graph + geom_sf(data = map_world, fill = NA, color = gray(.8)) +
+      geom_sf(data = glwd1, fill = 'lightblue', color = 'lightblue') +
+      geom_sf(data = glwd2, fill = 'lightblue', color = 'lightblue') +
       geom_sf(data = pais, fill = NA, color = gray(.1)) +
+      geom_sf(data = shp_sf, fill = NA, color = gray(.1), alpha = 0.4) +
       ggrepel::geom_label_repel(data = af, aes(X, Y, label = Initals),
                                 arrow = arrow(length = unit(0.03, "npc"), type = "closed", ends = "first"),
                                 force = 10, 
@@ -1127,7 +1328,9 @@ do_srad_country <- function(data_split){
       coord_sf(xlim = xlims, ylim = ylims) +
       labs(fill = glue::glue('LGP\n(days)  '), 
            title = glue::glue('gSeason = {i}; Change'),x = 'Longitude', y = 'Latitude') +
-      scale_fill_gradient2(low = '#A50026', mid = 'white', high = '#000099', 
+      scale_fill_gradient2(limits =  my_limits_MM, 
+                           breaks = my_breaks_MM,
+                           low = '#A50026', mid = 'white', high = '#000099', 
                            guide = guide_colourbar(barwidth = 20, label.theme = element_text(angle = 25, size = 35))) +
       scale_y_continuous(breaks = round(ylims, 2), n.breaks = 3) +
       scale_x_continuous(breaks = round(xlims, 2), n.breaks = 3) +
@@ -1151,24 +1354,10 @@ do_srad_country <- function(data_split){
 
 
 
+
 # =---------------------------------------------------------------------------------------
 # =--------------------------------------
 # =-------------------------------------
-# Solo para los paises con correcciones
-# tfm_s <- function(data){
-#   pt <- arrange(data, x, y) %>% rename(longitude = 'x', latitude = 'y', tn = 'id')
-#   crd_mod <- arrange(crd, x, y) %>% rename(longitude = 'x', latitude = 'y') %>% dplyr::select(longitude, latitude,id)
-#   
-#   
-#   ps_mod <- fuzzyjoin::geo_inner_join(crd_mod, pt )
-#   ps_mod <- ps_mod %>% dplyr::select(-longitude.y, -latitude.y) %>%
-#     rename(x =  'longitude.x' , y = 'latitude.x' ) %>%
-#     dplyr::mutate(cat = case_when(id == tn ~ 'Ok', id != tn ~ 'alert',
-#                                   is.na(tn) ~ 'refill', is.na(id) ~ 'never' , TRUE ~ 'never')) %>%
-#     dplyr::mutate(id = case_when(cat == 'Ok'~ tn, cat == 'Ok'~ id, TRUE ~ id)) %>%
-#     dplyr::select(-tn, -cat)
-#   
-#   return(ps_mod)}
 
 # Optimization in reading data. 
 ag <- all_climate %>% dplyr::select(-climate) %>% 
@@ -1195,63 +1384,104 @@ if(Big == 'N'){
     return(data_c)  }) %>% 
     purrr::map(.f = nest) 
 }else if(Big == 'B'){
-  tag <- ag %>% purrr::map(.f = function(z){
-    path <- glue::glue('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/{country}')
-    # Si... se tienen los idw. 
-    past_c <- fst::fst(glue::glue('{path}/past/{z$county}_1985_2015_idw.fst')) %>%
-      as_tibble() %>% 
-      dplyr::mutate(time = 'past') #%>% tfm_s(.)
+  
+  if(iso3c == 'CIV'){  
+    # Solo para los paises con correcciones
+    tfm_s <- function(data){
+      pt <- arrange(data, x, y) %>% rename(longitude = 'x', latitude = 'y', tn = 'id')
+      crd_mod <- arrange(crd, x, y) %>% rename(longitude = 'x', latitude = 'y') %>% dplyr::select(longitude, latitude,id)
+      
+      
+      ps_mod <- fuzzyjoin::geo_inner_join(crd_mod, pt )
+      ps_mod <- ps_mod %>% dplyr::select(-longitude.y, -latitude.y) %>%
+        rename(x =  'longitude.x' , y = 'latitude.x' ) %>%
+        dplyr::mutate(cat = case_when(id == tn ~ 'Ok', id != tn ~ 'alert',
+                                      is.na(tn) ~ 'refill', is.na(id) ~ 'never' , TRUE ~ 'never')) %>%
+        dplyr::mutate(id = case_when(cat == 'Ok'~ tn, cat == 'Ok'~ id, TRUE ~ id)) %>%
+        dplyr::select(-tn, -cat)
+      
+      return(ps_mod)}
     
-    futDir  <-  paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
-    fut_fls <- list.files(futDir, pattern = paste0('^',z$county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_idw.fst'), recursive = T)
-    fut_fls <- paste0(futDir,'/',fut_fls)  
     
-    future_c  <- fut_fls %>%
-      purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% dplyr::mutate(time = 'future'); return(df)}) %>%
-      # purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% mutate(time = 'future') %>%  tfm_s(.); return(df)}) %>%
-      dplyr::bind_rows()
+    tag <- ag %>% purrr::map(.f = function(z){
+      path <- glue::glue('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/{country}')
+      # Si... se tienen los idw. 
+      past_c <- fst::fst(glue::glue('{path}/past/{z$county}_1985_2015_idw.fst')) %>%
+        as_tibble() %>% 
+        dplyr::mutate(time = 'past') %>% tfm_s(.)
+      
+      futDir  <-  paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
+      fut_fls <- list.files(futDir, pattern = paste0('^',z$county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_idw.fst'), recursive = T)
+      fut_fls <- paste0(futDir,'/',fut_fls)  
+      
+      future_c  <- fut_fls %>%
+        purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% mutate(time = 'future') %>%  tfm_s(.); return(df)}) %>%
+        dplyr::bind_rows()
+      
+      data_c <- bind_rows(past_c, future_c) %>% dplyr::select(-x, -y)
+      return(data_c)  }) %>% 
+      purrr::map(.f = nest) 
     
-    data_c <- bind_rows(past_c, future_c) %>% dplyr::select(-x, -y)
-    return(data_c)  }) %>% 
-    purrr::map(.f = nest) 
-}
-
-
-data_for_graphs <- list()
-for(i in 1:length(ag)){
-  data_for_graphs[[i]] <- bind_cols(ag[[i]] , tag[[i]]) %>% setNames(c('county', 'data', 'data1'))
-}
-
-data_for_graphs <- bind_rows(data_for_graphs) %>% rename(data_graph = 'data1') %>% unnest(data) %>% 
-  nest(id, x, y, ISO3, Country) 
-
-# =------------------------------------------------------------------------------------------------
-# Puedo leer esto en paralelo, para que no haya problema... 
-cores <- 5
-plan(cluster, workers = cores)
-
-probando <- data_for_graphs %>% 
-  mutate(data_graph = furrr::future_map2(.x = data_graph, .y = data, .f = function(z,r){
-    data_n <- inner_join(z, r)  %>% 
-      separate(season, c('ok','semester'), sep = 's')})) %>% 
-  dplyr::select(-data) %>% 
-  unnest %>% dplyr::select(-county1, -ok)
-
-data_all <- probando %>%  
-  dplyr::select(id, ISO3, county, Country, x, y, time ,semester, CDD, P5D, P95, NT35, ndws) %>% 
-  unique() %>% group_split(semester)
-
-# data_split <- data_all[[1]]
-
-# =--------------------------------------
-
-data_all %>% purrr::walk(.f = do_clim_Country)
-# =--------------------------------------
-# =--------------------------------------
-
-# Srad index....
-index_complete <- probando %>% dplyr::select(id, ISO3, county, Country, x, y, time, gSeason, SLGP,LGP) %>% 
-  mutate(Big = Big)
-
-# =-----------------------
-do_srad_country(data_split = index_complete)
+    
+    
+  }else{  
+    tag <- ag %>% purrr::map(.f = function(z){
+      path <- glue::glue('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/{country}')
+      # Si... se tienen los idw. 
+      past_c <- fst::fst(glue::glue('{path}/past/{z$county}_1985_2015_idw.fst')) %>%
+        as_tibble() %>% 
+        dplyr::mutate(time = 'past')
+      
+      futDir  <-  paste0('//dapadfs.cgiarad.org/workspace_cluster_8/climateriskprofiles/results/',country,'/future')
+      fut_fls <- list.files(futDir, pattern = paste0('^',z$county,'_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_idw.fst'), recursive = T)
+      fut_fls <- paste0(futDir,'/',fut_fls)  
+      
+      future_c  <- fut_fls %>%
+        purrr::map(.f = function(x){df <- fst(x) %>% as_tibble() %>% dplyr::mutate(time = 'future'); return(df)}) %>%
+        dplyr::bind_rows()
+      
+      data_c <- bind_rows(past_c, future_c) %>% dplyr::select(-x, -y)
+      return(data_c)  }) %>% 
+      purrr::map(.f = nest) 
+  }
+  
+  
+  data_for_graphs <- list()
+  for(i in 1:length(ag)){
+    data_for_graphs[[i]] <- bind_cols(ag[[i]] , tag[[i]]) %>% setNames(c('county', 'data', 'data1'))
+  }
+  
+  data_for_graphs <- bind_rows(data_for_graphs) %>% rename(data_graph = 'data1') %>% unnest(data) %>% 
+    nest(id, x, y, ISO3, Country) 
+  
+  # =------------------------------------------------------------------------------------------------
+  # Puedo leer esto en paralelo, para que no haya problema... 
+  cores <- 5
+  plan(cluster, workers = cores)
+  
+  probando <- data_for_graphs %>% 
+    mutate(data_graph = furrr::future_map2(.x = data_graph, .y = data, .f = function(z,r){
+      data_n <- inner_join(z, r)  %>% 
+        separate(season, c('ok','semester'), sep = 's')})) %>% 
+    dplyr::select(-data) %>% 
+    unnest %>% dplyr::select(-county1, -ok)
+  
+  data_all <- probando %>%  
+    dplyr::select(id, ISO3, county, Country, x, y, time ,semester, CDD, P5D, P95, NT35, ndws) %>% 
+    unique() %>% group_split(semester)
+  
+  # data_split <- data_all[[1]]
+  
+  # =--------------------------------------
+  
+  data_all %>% purrr::walk(.f = do_clim_Country)
+  # =--------------------------------------
+  # =--------------------------------------
+  
+  # Srad index....
+  index_complete <- probando %>% dplyr::select(id, ISO3, county, Country, x, y, time, gSeason, SLGP,LGP) %>% 
+    mutate(Big = Big)
+  
+  # =-----------------------
+  do_srad_country(data_split = index_complete)
+  
