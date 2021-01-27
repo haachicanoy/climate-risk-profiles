@@ -195,22 +195,30 @@ do_climatology <- function(country = 'Kenya',
       if(!is.null(manual)){
         for(i in 1:length(manual)){
           if(sum(diff(manual[[i]]) < 0) > 0){
-            plt <- plt +
-              ggplot2::annotate("rect",
-                                xmin  = manual[[i]][1]-.5,
-                                xmax  = manual[[i]][which(diff(manual[[i]]) < 0)]+.5,
-                                ymin  = -Inf,
-                                ymax  = Inf,
-                                alpha =.3,
-                                fill  = "forestgreen")
-            plt <- plt +
-              ggplot2::annotate("rect",
-                                xmin  = manual[[i]][which(diff(manual[[i]]) < 0)+1]-.5,
-                                xmax  = manual[[i]][length(manual[[i]])]+.5,
-                                ymin  = -Inf,
-                                ymax  = Inf,
-                                alpha =.3,
-                                fill  = "forestgreen")
+            # plt <- plt +
+            #   ggplot2::annotate("rect",
+            #                     xmin  = manual[[i]][1]-.5,
+            #                     xmax  = manual[[i]][which(diff(manual[[i]]) < 0)]+.5,
+            #                     ymin  = -Inf,
+            #                     ymax  = Inf,
+            #                     alpha =.3,
+            #                     fill  = "forestgreen")
+            # plt <- plt +
+            #   ggplot2::annotate("rect",
+            #                     xmin  = manual[[i]][which(diff(manual[[i]]) < 0)+1]-.5,
+            #                     xmax  = manual[[i]][length(manual[[i]])]+.5,
+            #                     ymin  = -Inf,
+            #                     ymax  = Inf,
+            #                     alpha =.3,
+            #                     fill  = "forestgreen")
+            
+            
+            plt <- plt + 
+              geom_vline(xintercept = manual[[i]][1]-.5, colour = 'forestgreen', size=1) + 
+              geom_vline(xintercept = manual[[i]][length(manual[[i]])]+.5,  colour = 'forestgreen', size=1)
+            
+            
+            
           } else {
             
             
@@ -223,14 +231,23 @@ do_climatology <- function(country = 'Kenya',
               
             }else{
               colors_vct <- c('forestgreen','#b37b53')
-              plt <- plt +
-                ggplot2::annotate("rect",
-                                  xmin  = manual[[i]][1]-.5,
-                                  xmax  = manual[[i]][length(manual[[i]])]+.5,
-                                  ymin  = -Inf,
-                                  ymax  = Inf,
-                                  alpha =.3,
-                                  fill  = colors_vct[i])
+              # plt <- plt +
+              #   ggplot2::annotate("rect",
+              #                     xmin  = manual[[i]][1]-.5,
+              #                     xmax  = manual[[i]][length(manual[[i]])]+.5,
+              #                     ymin  = -Inf,
+              #                     ymax  = Inf,
+              #                     alpha =.3,
+              #                     colour  = colors_vct[i], 
+              #                     fill =  NULL)
+              
+              linetype_name <- ifelse( i ==  1, "solid", "dashed")
+              
+              plt <- plt + 
+                geom_vline(xintercept = manual[[i]][1]-.5, colour = colors_vct[i], size=1, linetype = linetype_name) + 
+                geom_vline(xintercept = manual[[i]][length(manual[[i]])]+.5,  colour = colors_vct[i], size=1, linetype = linetype_name)
+              
+              
             }
           }
         }
@@ -242,6 +259,7 @@ do_climatology <- function(country = 'Kenya',
   return(cat('Climatology graph correctly created\n'))
 }
 
+
 ## Coding examples
 # # No seasons
 # do_climatology(country = 'Senegal',
@@ -251,10 +269,10 @@ do_climatology <- function(country = 'Kenya',
 #                auto    = NULL)  # Should be NULL
 
 # # Manual seasons
-do_climatology(country = 'Burkina_Faso',
-               county  = 'Sud-Ouest',
+do_climatology(country = 'Togo',
+               county  = 'Maritime',
                seasons = TRUE,           # Should be TRUE
-               manual  = list(s1 = 4:10), # Should be something like e.g. list(s1 = c(11:12,1:4)
+               manual  = list(s1 = 2:6, s2 = 7:12), # Should be something like e.g. list(s1 = c(11:12,1:4)
                auto    = NULL)           # Should be NULL
 
 # # Auto seasons
