@@ -1,11 +1,10 @@
-# Main functions
-# By: A. Esquivel & H. Achicanoy
-# Alliance CIAT-Bioversity, 2020
+# -------------------------------------------------- #
+# Climate Risk Profiles -- Main functions
+# A. Esquivel, H. Achicanoy & J. Ramirez-Villegas
+# Alliance Bioversity-CIAT, 2021
+# -------------------------------------------------- #
 
-options(warn = -1, scipen = 999)
-suppressMessages(library(compiler))
-suppressMessages(if(!require(pacman)){install.packages('pacman'); library(pacman)})
-
+# Windows parallelization functions
 clusterExport <- local({
   gets <- function(n, v) { assign(n, v, envir = .GlobalEnv); NULL }
   function(cl, list, envir = .GlobalEnv) {
@@ -91,7 +90,6 @@ tmean <- function(tmax, tmin, season_ini=1, season_end=365){
   tavg <- do.call(rbind, tavg)
   return(tavg)
 }
-
 tmeanCMP <- compiler::cmpfun(tmean)
 
 ### Total prec at year ***
@@ -99,7 +97,6 @@ calc_totprec <- function(prec){
   totprec <- sum(prec, na.rm=T)
   return(totprec)
 }
-
 calc_totprecCMP <- compiler::cmpfun(calc_totprec)
 
 ### Maximum number of consecutive dry days, prec < 1 mm
@@ -108,7 +105,6 @@ dr_stress <- function(PREC, p_thresh=1){
   cons_days <- max(runs$lengths[runs$values==1], na.rm=TRUE)
   return(cons_days)
 }
-
 dr_stressCMP <- compiler::cmpfun(dr_stress)
 
 ### number of prec days
@@ -181,7 +177,7 @@ soilcap_calc <- function(x, minval, maxval) {
   return(soilcp)
 }
 
-#potential evapotranspiration
+# potential evapotranspiration
 peest <- function(srad, tmin, tmax) {
   #constants
   albedo <- 0.2
@@ -224,9 +220,9 @@ peest <- function(srad, tmin, tmax) {
   return(et_max)
 }
 
-#the two functions below estimate the ea/ep
-#based on Jones (1987)
-#ea/ep: actual to potential evapotranspiration ratio
+# the two functions below estimate the ea/ep
+# based on Jones (1987)
+# ea/ep: actual to potential evapotranspiration ratio
 eabyep_calc <- function(soilcp=100, cropfc=1, avail=50, prec, evap) {
   avail <- min(c(avail,soilcp))
   eratio <- eabyep(soilcp,avail)
@@ -242,7 +238,7 @@ eabyep_calc <- function(soilcp=100, cropfc=1, avail=50, prec, evap) {
   return(out)
 }
 
-#ea/ep function
+# ea/ep function
 eabyep <- function(soilcp, avail) {
   percwt <- min(c(100,avail/soilcp*100))
   percwt <- max(c(1,percwt))
@@ -250,7 +246,7 @@ eabyep <- function(soilcp, avail) {
   return(eratio)
 }
 
-#wrapper to calculate the water balance modeling variables
+# wrapper to calculate the water balance modeling variables
 watbal_wrapper <- function(out_all, soilcp){
   out_all$Etmax <- out_all$AVAIL <- out_all$ERATIO <- out_all$RUNOFF <- out_all$DEMAND <- out_all$CUM_prec <- NA
   for (d in 1:nrow(out_all)) {
@@ -276,12 +272,11 @@ watbal_wrapper <- function(out_all, soilcp){
   return(out_all)
 }
 
-#calculate number of water stress days
+# calculate number of water stress days
 calc_wsdays <- function(ERATIO, season_ini=1, season_end=365, e_thresh=0.3) {
   wsdays <- length(which(ERATIO[season_ini:season_end] < e_thresh))
   return(wsdays)
 }
-
 calc_wsdaysCMP <- compiler::cmpfun(calc_wsdays)
 
 ### HTS1, HTS2, LETHAL: heat stress using tmax ***
@@ -289,7 +284,6 @@ calc_hts <- function(tmax, season_ini=1, season_end=365, t_thresh=35) {
   hts <- length(which(tmax[season_ini:season_end] >= t_thresh))
   return(hts)
 }
-
 calc_htsCMP <- compiler::cmpfun(calc_hts)
 
 ### CD: crop duration, if Tmean > (22, 23, 24) then CD=T-23, else CD=0 ***
@@ -300,7 +294,7 @@ calc_cdur <- function(TMEAN, season_ini=1, season_end=365, t_thresh=35){
 }
 calc_cdurCMP <- compiler::cmpfun(calc_cdur)
 
-#DS2: max number of consecutive days Ea/Ep < 0.4, 0.5, 0.6
+# DS2: max number of consecutive days Ea/Ep < 0.4, 0.5, 0.6
 calc_cons_wsdays <- function(x, season_ini=1, season_end=365, e_thresh=0.4) {
   cdd <- 0; cdd_seq <- c()
   for (i_x in season_ini:season_end) {
@@ -316,7 +310,7 @@ calc_cons_wsdays <- function(x, season_ini=1, season_end=365, e_thresh=0.4) {
   return(max_cdd)
 }
 
-#ATT: accum thermal time using capped top, Tb=7,8,9, To=30,32.5,35
+# ATT: accum thermal time using capped top, Tb=7,8,9, To=30,32.5,35
 calc_att <- function(x, season_ini=1, season_end=365, tb=10, to=20) {
   x$TMEAN <- (x$tmin + x$tmax) * 0.5
   att <- sapply(x$TMEAN[season_ini:season_end], ttfun, tb, to)
@@ -324,7 +318,7 @@ calc_att <- function(x, season_ini=1, season_end=365, tb=10, to=20) {
   return(att)
 }
 
-#function to calc tt
+# function to calc tt
 ttfun <- function(tmean, tb, to) {
   if (tmean<to & tmean>tb) {
     teff <- tmean-tb
@@ -336,7 +330,7 @@ ttfun <- function(tmean, tb, to) {
   return(teff)
 }
 
-#DLOSS: duration loss (difference between No. days to reach ATT_baseline in future vs. baseline)
+# DLOSS: duration loss (difference between No. days to reach ATT_baseline in future vs. baseline)
 calc_dloss <- function(x, season_ini, dur_b=110, att_b=5000, tb=10, to=20) {
   x$TMEAN <- (x$tmin + x$tmax) * 0.5
   att <- sapply(x$TMEAN[season_ini:(nrow(x))], ttfun, tb, to)
@@ -346,15 +340,15 @@ calc_dloss <- function(x, season_ini, dur_b=110, att_b=5000, tb=10, to=20) {
   return(dloss)
 }
 
-#WES: wet early season if period between sowing and anthesis is above field cap. >= 50 % time
-#     i.e. frequency of days if RUNOFF > 1
+# WES: wet early season if period between sowing and anthesis is above field cap. >= 50 % time
+#      i.e. frequency of days if RUNOFF > 1
 calc_wes <- function(x, season_ini, season_end, r_thresh=1) {
   wes <- length(which(x$RUNOFF[season_ini:season_end] > r_thresh))
   return(wes)
 }
 
-#BADSOW: no. days in sowing window +-15 centered at sdate with 0.05*SOILCP < AVAIL < 0.9*SOILCP
-#        if this is < 3 then crop runs into trouble
+# BADSOW: no. days in sowing window +-15 centered at sdate with 0.05*SOILCP < AVAIL < 0.9*SOILCP
+#         if this is < 3 then crop runs into trouble
 calc_badsow <- function(x, season_ini, soilcp) {
   sow_i <- season_ini - 15; sow_f <- season_ini + 15
   if (sow_i < 1) {sow_i <- 1}; if (sow_f > 365) {sow_f <- 365}
@@ -363,8 +357,8 @@ calc_badsow <- function(x, season_ini, soilcp) {
   return(badsow)
 }
 
-#BADHAR: no. days in harvest window (+25 after hdate) with AVAIL < 0.85*SOILCP
-#        if this is < 3 then crop runs into trouble
+# BADHAR: no. days in harvest window (+25 after hdate) with AVAIL < 0.85*SOILCP
+#         if this is < 3 then crop runs into trouble
 calc_badhar <- function(x, season_end, soilcp) {
   har_i <- season_end
   har_f <- har_i + 25; if (har_f > 365) {har_f <- 365}
