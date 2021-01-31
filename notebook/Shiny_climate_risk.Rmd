@@ -1,0 +1,176 @@
+---
+title: "PARM toolkit - Weather risks assessment"
+# subtitle: "Burkina Faso - Sud-Ouest"
+author: 'A. Esquivel  - H. Achicanoy'
+date: "1/28/2021"
+output: html_document
+runtime: shiny
+---
+
+<!-- <div align="center">  comentarios: tenemos que poner aqui, o en el main todos los paquetes. Creo que lo mejor que podemos hacer es llamar el main, una vez que el archivo esta guardado para que corra todo lo demás <div> -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+suppressMessages(library(pacman))
+suppressMessages(pacman::p_load(dplyr, tidyverse, DT,  sf,  
+                                raster, ncdf4, rgdal, shiny))
+
+# library(shiny)
+# library(shinyFiles)
+
+# Arreglo una cosa y se da~nan 3. 
+
+# Por ahora dejare aqui esto, mientras encuentro una forma mas indicada, # de agregar la direccion de los archivos :v , tengo muchas teorias y 
+# poco tiempo. 
+# source('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/main_script.R')
+
+```
+<br>
+
+The developed model provides a country/regional overview of the potential weather risks over historical periods, estimating the likely impact and the regions where it is going to take place.
+The proposed method consists of a time series analysis of climate data. Temperature, precipitation, solar radiation, and soil variables are using to calculate agro-climatic indices that quantify the impact of historical changes over the main value chains analyzed in the study region. The analysis is carried out at 5 km resolution.
+Following, a detailed description about the inputs, methodology, and results is presented.
+
+<br>
+
+
+### Repository 
+<br>
+
+GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
+
+<br>
+
+### input data
+
+<br>
+
+<div align="center"> _**Before you run:**  We advise that you analyze a small region, because if your machine doesn't have good processing power it’s likely that the script won’t run. Also, some process run in parallel, for this reason is important to check how many cores your machine have, always use less that the total amount of cores. However, keep in mind; **more cores use more RAM memory**. _<div>
+
+<br>
+
+```{r, echo=FALSE}
+
+max_cores <- parallel::detectCores() - 1
+
+count_names <- raster::ccodes() %>% as_tibble()  %>% 
+  mutate(Country = iconv(NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>% 
+  dplyr::select(Country, ISO3)
+
+# DT::renderDataTable(count_names)
+
+# Funciones para el guardado de los parametros. 
+results_dir <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/responses/'
+
+saveData <- function(data) {
+    data <- t(data)
+    write.csv(x = data, file = paste0(results_dir, 'parameters.csv'), 
+        row.names = FALSE, quote = TRUE)
+}
+
+load_data <- function() {
+    data <- read_csv(paste0(results_dir, 'parameters.csv'))
+    data
+}
+
+
+# Define the fields we want to save from the form
+fields <- c("ISO3", "Adm_lvl", "county","ty", "seasons", "m_seasons",
+            "n_wtts", "Big_cnt", "ncores")
+
+# Shiny app with 3 fields that the user can submit data for
+shiny::shinyApp(
+  ui = fluidPage(
+    
+      # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      
+    titlePanel("Parameters."),
+    
+    textInput("ISO3", "ISO3 - country cod", ""),
+    sliderInput("Adm_lvl", "Administrative level",
+                0, 2, 1),
+    textInput("county", "County", ""),
+    br(), 
+    
+    radioButtons("ty", label = "Type of season", 
+    choices = list("Manual" = 1, "Automatic" = 2),
+    selected = 1),
+    
+    sliderInput("seasons", label = "Manual season", min = 1, 
+    max = 12, value = c(1, 12)), 
+    
+     fluidRow(
+       column(5,
+    selectInput("m_seasons", label = 'm_seasons',
+      choices = list(1, 2),
+      selected = 1),
+       ), 
+    column(5,
+    numericInput("n_wtts", label = "n_wtts", value = 1, min = 10, max = 365),
+    ), 
+     ), 
+     
+    br(),
+    checkboxInput("Big_cnt", "Big county", FALSE),
+     helpText('If this argument is TRUE, it uses a 30%-pixels sample of the entire dataset to compute the indices, and then, it does an interpolation for the whole county’s pixels.'),
+    
+  
+     numericInput("ncores", label = "cores", value = 1, min = 1, max = max_cores),
+  
+    
+    actionButton("submit", "Submit")
+  ),
+      mainPanel(
+
+      tabsetPanel(
+          tabPanel("Country Names", DT::dataTableOutput('table')),
+          tabPanel("Season", verbatimTextOutput("summary")),
+          tabPanel("Spatial Region", plotOutput("plot"))
+        ), 
+    ), 
+  ),
+  ),
+  server = function(input, output, session) {
+    
+   formData <- reactive({
+      data <- sapply(fields, function(x) input[[x]])
+      data
+    })
+    
+    # When the Submit button is clicked, save the form data
+    observeEvent(input$submit, {
+      saveData(formData())
+    })
+    
+    
+    output$table <- DT::renderDataTable(count_names)
+    
+    
+    # Show the previous responses
+    # (update with current response when Submit is clicked)
+    output$responses <- DT::renderDataTable({
+      input$submit
+      loadData()
+    })
+  }
+)
+```
+<br>
+
+<div align="left"> 
++	**iso3c:** this correspond to a country’s ISO3 code (always in capital letters).
++	**Country:** name of the country (how you type is how it will be appearing in the results and titles, please don’t use special characters).  
++	**adm_lvl:** administrative level argument is used to download the country’s shp, if you use adm_lvl = 0, you will process the whole country. adm_lvl = 1, you will use the state/department division, **adm_lvl = 2 is for city/county division. 
++	County:	 main department or city, this depends of the selected adm_lvl (remember, you must use the same name on the shp).
++	**seasons:** here we put the starting and ending month in which the agro-climate data will be analyzed (starting month: ending month). If this argument is specified, m_seasons and n_wtts must be NULL. 
++	**m_seasons:** this argument identifies the number of seasons of the year, with length n_wtts lenght. If you use specific seasons, this argument must be NULL.  	
++	**n_wtts:**	this argument is the number of rainy days. If this argument is specified, seasons argument must be NULL. 
++	**big_cnt:** If this argument is TRUE, it uses a 30%-pixels sample of the entire dataset to compute the indices, and then, it does an interpolation for the whole county’s pixels.
++	**ncores:** Number of cores to use. 
+ <div>
+
