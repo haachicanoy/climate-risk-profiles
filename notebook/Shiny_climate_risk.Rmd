@@ -26,6 +26,130 @@ suppressMessages(pacman::p_load(dplyr, tidyverse, DT,  sf,
 # source('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/main_script.R')
 
 ```
+
+```{r}
+library(plotly)
+library(leaflet)
+climate_exp <- tibble(month = month.abb, panel = c(1:6, 6:1))
+print(climate_exp)
+
+
+fig <- plot_ly(x = fct_reorder(month.abb, 1:12), y = c(1:6, 6:1),
+  type = "bar", marker = list(color = 'rgb(158,202,225)',
+                      line = list(color = 'rgb(8,48,107)',
+                                  width = 1.5))
+)
+
+fig
+
+
+
+
+leaflet() %>% addTiles() %>% setView(0, 0, 1) %>%
+  addMiniMap()
+
+```
+
+
+```{r}
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      tabsetPanel(id = "tabset",
+        tabPanel("Uniform",
+          numericInput("unifCount", "Count", 100),
+          sliderInput("unifRange", "Range", min = -100, max = 100, value = c(-10, 10))
+        ),
+        tabPanel("Normal",
+          numericInput("normCount", "Count", 100),
+          numericInput("normMean", "Mean", 0),
+          numericInput("normSd", "Std Dev", 1)
+        )
+      ),
+      actionButton("go", "Plot")
+    ),
+    mainPanel(
+      plotOutput("plot")
+    )
+  )
+)
+
+server <- function(input, output){
+  v <- reactiveValues(doPlot = FALSE)
+
+  observeEvent(input$go, {
+    # 0 will be coerced to FALSE
+    # 1+ will be coerced to TRUE
+    v$doPlot <- input$go
+  })
+
+  observeEvent(input$tabset, {
+    v$doPlot <- FALSE
+  })  
+
+  output$plot <- renderPlot({
+    if (v$doPlot == FALSE) return()
+
+    isolate({
+      data <- if (input$tabset == "Uniform") {
+        runif(input$unifCount, input$unifRange[1], input$unifRange[2])
+      } else {
+        rnorm(input$normCount, input$normMean, input$normSd)
+      }
+      
+      hist(data)
+    })
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+```{r}
+library(shinyjs)
+
+ui <- shinyUI(fluidPage(
+
+    useShinyjs(),
+
+    radioButtons("radio_choose", "Season", choices = c("Year", "Numbers")),
+
+    checkboxGroupInput("checkbox_years", "Manual", choices = c(1995, 1996, 1997, 1997)),
+
+    checkboxGroupInput("checkbox_numbers", "Numbers", choices = c(1, 2, 3))
+
+))
+
+server <- function(input, output, session) {
+
+    #Observe the radio buttons (runs when the radio button changes)
+    observeEvent(input$radio_choose, {
+
+        if(input$radio_choose == "Year") {
+
+            shinyjs::show("checkbox_years")
+            shinyjs::hide("checkbox_numbers")
+
+        }
+
+        if(input$radio_choose == "Numbers") {
+
+            shinyjs::hide("checkbox_years")
+            shinyjs::show("checkbox_numbers")
+
+        }
+
+    })
+
+}
+
+shinyApp(ui, server)
+```
+
+
+
+
 <br>
 
 The developed model provides a country/regional overview of the potential weather risks over historical periods, estimating the likely impact and the regions where it is going to take place.
@@ -51,12 +175,12 @@ GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
 <br>
 
 ```{r, echo=FALSE}
-
-max_cores <- parallel::detectCores() - 1
-
 count_names <- raster::ccodes() %>% as_tibble()  %>% 
   mutate(Country = iconv(NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>% 
   dplyr::select(Country, ISO3)
+
+
+max_cores <- parallel::detectCores() - 1
 
 # DT::renderDataTable(count_names)
 
@@ -65,7 +189,7 @@ results_dir <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/r
 
 saveData <- function(data) {
     data <- t(data)
-    write.csv(x = data, file = paste0(results_dir, 'parameters.csv'), 
+    write.csv(x = data, file = 'parameters.csv', 
         row.names = FALSE, quote = TRUE)
 }
 
@@ -76,7 +200,7 @@ load_data <- function() {
 
 
 # Define the fields we want to save from the form
-fields <- c("ISO3", "Adm_lvl", "county","ty", "seasons", "m_seasons",
+fields <- c("Adm_lvl", "county","ty", "seasons", "m_seasons",
             "n_wtts", "Big_cnt", "ncores")
 
 # Shiny app with 3 fields that the user can submit data for
@@ -91,7 +215,6 @@ shiny::shinyApp(
       
     titlePanel("Parameters."),
     
-    textInput("ISO3", "ISO3 - country cod", ""),
     sliderInput("Adm_lvl", "Administrative level",
                 0, 2, 1),
     textInput("county", "County", ""),
@@ -128,7 +251,9 @@ shiny::shinyApp(
       mainPanel(
 
       tabsetPanel(
-          tabPanel("Country Names", DT::dataTableOutput('table')),
+          tabPanel("Country Names", 
+                   DT::dataTableOutput('table'), 
+                   verbatimTextOutput('x5')),
           tabPanel("Season", verbatimTextOutput("summary")),
           tabPanel("Spatial Region", plotOutput("plot"))
         ), 
@@ -137,8 +262,22 @@ shiny::shinyApp(
   ),
   server = function(input, output, session) {
     
+    output$table = DT::renderDataTable(count_names, server = FALSE)
+    
+    output$x5 = renderPrint({
+    cat('Rows on the current page:\n\n')
+    cat(input$table_rows_current, sep = ', ')
+    cat('\n\nAll rows:\n\n')
+    cat(input$table_rows_all, sep = ', ')
+    cat('\n\nSelected rows:\n\n')
+    cat(input$table_rows_selected, sep = ', ')})
+    
+    
+    
    formData <- reactive({
       data <- sapply(fields, function(x) input[[x]])
+      s = input$table_rows_selected
+      data <- c(data, data.frame(count_names[s, ]))
       data
     })
     
@@ -147,16 +286,25 @@ shiny::shinyApp(
       saveData(formData())
     })
     
-    
-    output$table <- DT::renderDataTable(count_names)
-    
-    
     # Show the previous responses
     # (update with current response when Submit is clicked)
     output$responses <- DT::renderDataTable({
       input$submit
       loadData()
     })
+    
+    
+    
+#     output$plot <- leaflet::renderLeaflet({
+#     
+#     # Generate basemap
+#       map <- leaflet() %>% 
+#           setView(0, 0, 1)
+#       
+#       map
+#     
+# })
+    
   }
 )
 ```
