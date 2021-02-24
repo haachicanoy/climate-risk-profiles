@@ -1,172 +1,70 @@
 ---
 title: "PARM toolkit - Weather risks assessment"
-# subtitle: "Burkina Faso - Sud-Ouest"
+subtitle: "Input data sheme"
 author: 'A. Esquivel  - H. Achicanoy'
-date: "1/28/2021"
+date: "2/22/2021"
 output: html_document
 runtime: shiny
 ---
 
-<!-- <div align="center">  comentarios: tenemos que poner aqui, o en el main todos los paquetes. Creo que lo mejor que podemos hacer es llamar el main, una vez que el archivo esta guardado para que corra todo lo demás <div> -->
+#### GitHub Repository --- (<https://github.com/haachicanoy/climate-risk-profiles>)
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
 suppressMessages(library(pacman))
-suppressMessages(pacman::p_load(dplyr, tidyverse, DT,  sf,  
+suppressMessages(pacman::p_load(dplyr, tidyverse, DT,  sf, leaflet,  
                                 raster, ncdf4, rgdal, shiny))
+# library(shiny); library(shinyFiles)
 
-# library(shiny)
-# library(shinyFiles)
-
-# Arreglo una cosa y se da~nan 3. 
-
-# Por ahora dejare aqui esto, mientras encuentro una forma mas indicada, # de agregar la direccion de los archivos :v , tengo muchas teorias y 
-# poco tiempo. 
 # source('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/main_script.R')
 
-```
-
-```{r}
-library(plotly)
-library(leaflet)
-climate_exp <- tibble(month = month.abb, panel = c(1:6, 6:1))
-print(climate_exp)
-
-
-fig <- plot_ly(x = fct_reorder(month.abb, 1:12), y = c(1:6, 6:1),
-  type = "bar", marker = list(color = 'rgb(158,202,225)',
-                      line = list(color = 'rgb(8,48,107)',
-                                  width = 1.5))
-)
-
-fig
-
-
-
-
-leaflet() %>% addTiles() %>% setView(0, 0, 1) %>%
-  addMiniMap()
 
 ```
-
-
-```{r}
-ui <- fluidPage(
-  sidebarLayout(
-    sidebarPanel(
-      tabsetPanel(id = "tabset",
-        tabPanel("Uniform",
-          numericInput("unifCount", "Count", 100),
-          sliderInput("unifRange", "Range", min = -100, max = 100, value = c(-10, 10))
-        ),
-        tabPanel("Normal",
-          numericInput("normCount", "Count", 100),
-          numericInput("normMean", "Mean", 0),
-          numericInput("normSd", "Std Dev", 1)
-        )
-      ),
-      actionButton("go", "Plot")
-    ),
-    mainPanel(
-      plotOutput("plot")
-    )
-  )
-)
-
-server <- function(input, output){
-  v <- reactiveValues(doPlot = FALSE)
-
-  observeEvent(input$go, {
-    # 0 will be coerced to FALSE
-    # 1+ will be coerced to TRUE
-    v$doPlot <- input$go
-  })
-
-  observeEvent(input$tabset, {
-    v$doPlot <- FALSE
-  })  
-
-  output$plot <- renderPlot({
-    if (v$doPlot == FALSE) return()
-
-    isolate({
-      data <- if (input$tabset == "Uniform") {
-        runif(input$unifCount, input$unifRange[1], input$unifRange[2])
-      } else {
-        rnorm(input$normCount, input$normMean, input$normSd)
-      }
-      
-      hist(data)
-    })
-  })
-}
-
-shinyApp(ui, server)
-```
-
-
-```{r}
-library(shinyjs)
-
-ui <- shinyUI(fluidPage(
-
-    useShinyjs(),
-
-    radioButtons("radio_choose", "Season", choices = c("Year", "Numbers")),
-
-    checkboxGroupInput("checkbox_years", "Manual", choices = c(1995, 1996, 1997, 1997)),
-
-    checkboxGroupInput("checkbox_numbers", "Numbers", choices = c(1, 2, 3))
-
-))
-
-server <- function(input, output, session) {
-
-    #Observe the radio buttons (runs when the radio button changes)
-    observeEvent(input$radio_choose, {
-
-        if(input$radio_choose == "Year") {
-
-            shinyjs::show("checkbox_years")
-            shinyjs::hide("checkbox_numbers")
-
-        }
-
-        if(input$radio_choose == "Numbers") {
-
-            shinyjs::hide("checkbox_years")
-            shinyjs::show("checkbox_numbers")
-
-        }
-
-    })
-
-}
-
-shinyApp(ui, server)
-```
-
-
-
-
 <br>
 
 The developed model provides a country/regional overview of the potential weather risks over historical periods, estimating the likely impact and the regions where it is going to take place.
+
+
 The proposed method consists of a time series analysis of climate data. Temperature, precipitation, solar radiation, and soil variables are using to calculate agro-climatic indices that quantify the impact of historical changes over the main value chains analyzed in the study region. The analysis is carried out at 5 km resolution.
+
 Following, a detailed description about the inputs, methodology, and results is presented.
 
 <br>
 
 
-### Repository 
-<br>
-
-GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
+### Data description
 
 <br>
+
+#### Variables and climate data sets: 
+
+Historical climate information is the base to estimate the likely impact and regions where it is going to take place, the most important are: 
+
++ Precipitation (mm/day): we use the information from the Climate Hazards Group InfraRed Precipitation with Station data (CHIRPS) daily dataset (<https://www.chc.ucsb.edu/data/chirps>), it is a 35+ year rainfall data set. Spanning 50°S-50°N (and all longitudes), the time period covered 1981 to near-present. CHIRPS has 0.05° resolution satellite imagery. For more information, refer to the web site or read Funk, et all, 2015.
+
++ Temperature (°C/day):  in this case we need to get data of Tmax, Tmin y Tmean. CHIRTS daily dataset (<https://www.chc.ucsb.edu/data/chirtsdaily>) provides the daily maximum and minimum temperatures. CHIRTS is quasi-global (60°S – 70°N, for all longitudes), and their resolution is 0.05°, approx. 5km). This data set is available between 1983 to 2016. 
+
++ Solar radiation (MJ m^(-2) d^(-1)): This variable was taken from the National Aeronautics and Space Administration (NASA). The dataset contains daily incident solar radiation, Tmax, Tmin, dew point temperature (Tdew), precipitation, wind speed, and relative humidity (RH) data for each 1° × 1° grid (approximately 111 km2 at the equator). This data is available on NASA POWER’s web site (<https://power.larc.nasa.gov>).
+
+Moreover, we also need to incorporate location data like: 
+
++ Elevation (m): This variable is downloaded using the function getData from the raster package in R. The argument 'alt' stands for altitude (elevation); the data were aggregated from SRTM 90m. GADM is the database of global administrative boundaries used by R (<https://gadm.org>). 
+
+
++ Soil:  this data is from the ISRIC SoilGrids database. This is a global 30 arc-sec database derived through interpolation of soil samples (<https://www.isric.org/explore/soilgrids>).
+Before using these variables in the analysis, a data standardization process is developed to get the final resolution 0.05°, approx. 5km, and the modelling is done county by county. Additionally, the study period covered a 30-years (1985-2015).
+
+
+
+
+## Modelling 
+
+Next, we are going to explain how you can run the models using R-project. Please keep in mind, that you must have a specific version of R, R studio and install certain packages, so it's suggested that you check the requirements in the annexes before running the methodology.
 
 ### input data
+
 
 <br>
 
@@ -174,22 +72,60 @@ GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
 
 <br>
 
+
+#### Parameters.
+
+<div align="left"> 
+
+ <div>
+
+
+
+
 ```{r, echo=FALSE}
-count_names <- raster::ccodes() %>% as_tibble()  %>% 
-  mutate(Country = iconv(NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>% 
+count_names <- raster::ccodes() %>% as_tibble()  %>%
+  mutate(Country = iconv(NAME,from="UTF-8",to="ASCII//TRANSLIT")) %>%
   dplyr::select(Country, ISO3)
+
+# =-------
+climate_exp <- tibble(month_1 = 1:12, month = month.abb, panel = c(1:6, 6:1))
+
+p <- ggplot2::ggplot(data = climate_exp, aes(x =forcats::fct_reorder(month.abb, 1:12)  , y = c(1:6, 6:1))) +
+  geom_bar(stat = 'identity', position = 'dodge', fill = '#9ecae1') +
+  labs(x =  NULL, y = NULL) +
+  theme_bw() +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.border=element_blank())
+
+# =-----------------------------------------------------------
+adm_lvl =  1 
+iso3c <- 'BFA'
+shp_data <- raster::getData('GADM', country= iso3c, level=adm_lvl)
+shp_data@data[, glue::glue('NAME_{adm_lvl}')] <-
+  dplyr::pull(shp_data@data, glue::glue('NAME_{adm_lvl}')) %>%
+  stringr::str_replace_all(., ' ', '-') %>%
+  stringr::str_remove('[("!\"#$%()*,.:;<=>@[\\]^`{|}~.\']]') %>%
+  stringi::stri_trans_general(., "Latin-ASCII")
+
+shp <- shp_data %>% sf::st_as_sf()
+cty <- filter(shp, NAME_1 == 'Sud-Ouest')
+b <- suppressWarnings(st_centroid(cty$geometry) %>% st_coordinates()  )
+
+# =-----------------------------------------------------------
 
 
 max_cores <- parallel::detectCores() - 1
 
 # DT::renderDataTable(count_names)
 
-# Funciones para el guardado de los parametros. 
+# Funciones para el guardado de los parametros.
 results_dir <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/responses/'
 
 saveData <- function(data) {
     data <- t(data)
-    write.csv(x = data, file = 'parameters.csv', 
+    write.csv(x = data, file = 'parameters.csv',
         row.names = FALSE, quote = TRUE)
 }
 
@@ -200,70 +136,67 @@ load_data <- function() {
 
 
 # Define the fields we want to save from the form
-fields <- c("Adm_lvl", "county","ty", "seasons", "m_seasons",
-            "n_wtts", "Big_cnt", "ncores")
+fields <- c("Adm_lvl", "county","seasons", "m_seasons",
+            "n_wtts", "Big_cnt", "ncores") #
 
 # Shiny app with 3 fields that the user can submit data for
 shiny::shinyApp(
   ui = fluidPage(
-    
+
       # Sidebar layout with input and output definitions ----
   sidebarLayout(
 
     # Sidebar panel for inputs ----
     sidebarPanel(
-      
+
     titlePanel("Parameters."),
-    
-    sliderInput("Adm_lvl", "Administrative level",
-                0, 2, 1),
-    textInput("county", "County", ""),
-    br(), 
-    
-    radioButtons("ty", label = "Type of season", 
-    choices = list("Manual" = 1, "Automatic" = 2),
-    selected = 1),
-    
-    sliderInput("seasons", label = "Manual season", min = 1, 
-    max = 12, value = c(1, 12)), 
-    
-     fluidRow(
-       column(5,
-    selectInput("m_seasons", label = 'm_seasons',
-      choices = list(1, 2),
-      selected = 1),
-       ), 
-    column(5,
-    numericInput("n_wtts", label = "n_wtts", value = 1, min = 10, max = 365),
-    ), 
-     ), 
-     
-    br(),
+
+    # radioButtons("ty", label = "Type of season",
+    # choices = list("Manual" = 1, "Automatic" = 2),
+    # selected = 1),
     checkboxInput("Big_cnt", "Big county", FALSE),
      helpText('If this argument is TRUE, it uses a 30%-pixels sample of the entire dataset to compute the indices, and then, it does an interpolation for the whole county’s pixels.'),
-    
-  
+
+
      numericInput("ncores", label = "cores", value = 1, min = 1, max = max_cores),
-  
-    
+
+
     actionButton("submit", "Submit")
   ),
       mainPanel(
-
       tabsetPanel(
-          tabPanel("Country Names", 
-                   DT::dataTableOutput('table'), 
+          tabPanel("Country Names",
+                   DT::dataTableOutput('table'),
                    verbatimTextOutput('x5')),
-          tabPanel("Season", verbatimTextOutput("summary")),
-          tabPanel("Spatial Region", plotOutput("plot"))
-        ), 
-    ), 
-  ),
-  ),
+          tabPanel("Season",
+                  tabsetPanel(id = "tabset",
+          tabPanel("Manual",
+          fluidRow(
+       column(6,selectInput("Int", label = 'Int', choices = month.abb, selected = 'Jan'),
+       ),
+    column(6,selectInput("End", label = 'End', choices = month.abb, selected = 'Dec'),
+    ),
+    ),
+    plotOutput("plot2"), ),
+        tabPanel("Automatic",
+     fluidRow(
+       column(5,selectInput("m_seasons", label = 'm_seasons',
+      choices = list(1, 2), selected = 1),  ),
+    column(5, numericInput("n_wtts", label = "n_wtts", value = 100, min = 10, max = 365), ),  ),  ) )
+
+    ), # verbatimTextOutput("summary")
+          tabPanel("Spatial Region",
+   fluidRow(
+    column(5,sliderInput("Adm_lvl", "Administrative level",
+                0, 2, 1)),
+    column(5,textInput("county", "County", "") )  ),
+    leafletOutput("map")) 
+        ),  ),  ), ),
+
   server = function(input, output, session) {
-    
+
     output$table = DT::renderDataTable(count_names, server = FALSE)
-    
+
     output$x5 = renderPrint({
     cat('Rows on the current page:\n\n')
     cat(input$table_rows_current, sep = ', ')
@@ -271,54 +204,81 @@ shiny::shinyApp(
     cat(input$table_rows_all, sep = ', ')
     cat('\n\nSelected rows:\n\n')
     cat(input$table_rows_selected, sep = ', ')})
-    
-    
-    
+
+
+
    formData <- reactive({
       data <- sapply(fields, function(x) input[[x]])
       s = input$table_rows_selected
       data <- c(data, data.frame(count_names[s, ]))
       data
     })
-    
+
+
+   output$plot2 <- renderPlot({
+    f <-  p + geom_rect(xmin = input$Int, xmax = input$End , ymin=0, ymax = 6.5, fill = '#ffb3b3', alpha = 0.05)
+    f })
+
     # When the Submit button is clicked, save the form data
     observeEvent(input$submit, {
       saveData(formData())
     })
-    
+
     # Show the previous responses
     # (update with current response when Submit is clicked)
     output$responses <- DT::renderDataTable({
       input$submit
       loadData()
-    })
+    })    
     
     
+    output$map <- leaflet::renderLeaflet(     
+      
+      leaflet() %>% addTiles() %>%  setView(-3.23,10.47, zoom = 7) %>%
+      leaflet::addPolygons(data = shp, color = "gray",
+                       weight = 1, smoothFactor = 0.5,
+                       opacity = 1.0, fillOpacity = 0.5)  %>%
+    leaflet::addPolygons(data = cty, color = "red", 
+                       highlightOptions = highlightOptions(color = "white",weight = 2,bringToFront = TRUE))
     
-#     output$plot <- leaflet::renderLeaflet({
-#     
-#     # Generate basemap
-#       map <- leaflet() %>% 
-#           setView(0, 0, 1)
-#       
-#       map
-#     
-# })
+  )
+      
+      
+      
+
+
     
-  }
+    
+    }
 )
 ```
 <br>
 
+
+
 <div align="left"> 
-+	**iso3c:** this correspond to a country’s ISO3 code (always in capital letters).
-+	**Country:** name of the country (how you type is how it will be appearing in the results and titles, please don’t use special characters).  
-+	**adm_lvl:** administrative level argument is used to download the country’s shp, if you use adm_lvl = 0, you will process the whole country. adm_lvl = 1, you will use the state/department division, **adm_lvl = 2 is for city/county division. 
-+	County:	 main department or city, this depends of the selected adm_lvl (remember, you must use the same name on the shp).
-+	**seasons:** here we put the starting and ending month in which the agro-climate data will be analyzed (starting month: ending month). If this argument is specified, m_seasons and n_wtts must be NULL. 
-+	**m_seasons:** this argument identifies the number of seasons of the year, with length n_wtts lenght. If you use specific seasons, this argument must be NULL.  	
-+	**n_wtts:**	this argument is the number of rainy days. If this argument is specified, seasons argument must be NULL. 
-+	**big_cnt:** If this argument is TRUE, it uses a 30%-pixels sample of the entire dataset to compute the indices, and then, it does an interpolation for the whole county’s pixels.
-+	**ncores:** Number of cores to use. 
+
+
+### Steps to run the scripts (overview):
+
+1.	Historical data extraction: using free-climate databases, a spatial-temporal database is constructed for the specific country/region of interest. This database consists in a table format that storage the time series per location/pixel of (tmax, tmin, prec, srad).
+
+2.	Data processing is applied to guarantee good quality of the data.
+
+3.	Time series-indices construction: to quantify the weather risks that are present in the region, the method estimates indices on three categories: heat, drought, and moisture/flood risks. These calculations are developed by seasons, according to the knowledge of the value chains of interest.
+
+4.	Finally, a quantification of the trends and changes over spatial locations is done, and combined with all the risks by the assessment of the frequency and strength of the indices.
+
+
  <div>
+
+
+## References. 
+
++ Funk, C., Peterson, P., Landsfeld, M., Pedreros, D., Verdin, J., Shukla, S., ... & Michaelsen, J. (2015). The climate hazards infrared precipitation with stations—a new environmental record for monitoring extremes. Scientific data, 2(1), 1-21.
+
++ Funk, C., Peterson, P., Peterson, S., Shukla, S., Davenport, F., Michaelsen, J., ... & Mata, N. (2019). A High-Resolution 1983–2016 T max Climate Data Record Based on Infrared Temperatures and Stations by the Climate Hazard Center. Journal of Climate, 32(17), 5639-5658.
+
++ Zhang, T., Stackhouse Jr, P. W., Chandler, W. S., Hoell, J. M., WESTBERG, D. J., & Whitlock, C. H. (2007). A global perspective: NASA's prediction of worldwide energy resources (POWER) project.
+
 
