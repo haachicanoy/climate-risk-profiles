@@ -21,6 +21,31 @@ setwd('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/climate-risk-profiles/notebook/'
 root <- 'D:/OneDrive - CGIAR/Desktop/PARM_toolkit/'
 ```
 
+
+
+## Methodology 
+
+The developed model provides a country/regional overview of the potential weather risks over historical and future periods, estimating the likely impact and the regions where it is going to take place. 
+
+ 
+The proposed method consists of a time series analysis of climate data. Temperature, precipitation, solar radiation, and soil variables are used to calculate agro-climatic indices that quantify the impact of historical changes over the value chains analyzed in the study region. 
+
+
+The analysis is carried out at 5 km resolution. 
+
+ 
+
+# Steps: 
+
+Historical/future data extraction: using free-climate databases (poner las referencias), a spatio-temporal database is constructed for the specific country/region of interest. This database consists in a table format which storage the time series per location/pixel of (tmax, tmin, prec, srad) 
+
+Data processing is applying to guarantee good quality of the data. If future climate projections are available, bias-correction analysis must be done to correct the future time series adjusting them to the local climate. 
+
+Time series-indexes construction: to quantify the weather risks that present in the region, the method estimates indexes on three categories: heat, drought, and moisture/flood risks. These calculations are developing by seasons, according with the knowledge of the value chains of interest. 
+
+Finally, a quantification of the trends and changes over spatial locations is done, and combining all the risks by the assessment of the frequency and strength of the indexes. Time series trends and calculation of the projected changes in future scenarios are provided to identify and estimate in the specific areas where the higher impact would take place. 
+
+
 <!-- <div align="center"> 
 <div> -->
 ## Data description
@@ -37,13 +62,14 @@ The index calculated in this studio are in the ... , but other information we sh
 <div align="left"> 
 
 * Climate data sets
-  + CHIRPS daily data: This data are <https://www.chc.ucsb.edu/data/chirps>
-  + CHIRTS daily data: This data are          <https://www.chc.ucsb.edu/data/chirtsdaily>
-  - NASA POWER data: This data are <https://power.larc.nasa.gov/data-access-viewer/>
-  
-* Soilgrids: <https://www.isric.org/explore/soilgrids> 
 
-* GCM...
+This data is available:
+
+  + CHIRPS daily data (<https://www.chc.ucsb.edu/data/chirps>).
+  + CHIRTS daily data (<https://www.chc.ucsb.edu/data/chirtsdaily>).
+  - NASA POWER data: (<https://power.larc.nasa.gov/data-access-viewer/>).
+  
+* Soilgrids: (<https://www.isric.org/explore/soilgrids>).
 
 <div>
 
@@ -51,7 +77,7 @@ The index calculated in this studio are in the ... , but other information we sh
 
 
 ### Our parameters description. 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 parameters <- suppressMessages(  readr::read_csv('D:/OneDrive - CGIAR/Desktop/PARM_toolkit/parameters.csv') )
 
 knitr::kable(parameters, caption = 'Parameters')
@@ -76,16 +102,8 @@ knitr::kable(index, caption = 'Index')
 ```
 
 
-
-
-<div align="left"> Description about our work... like, ok here we compute this type of index, that represents bla bla bla. 
-
-I guess here is a good idea use the table for explain all of our index, one good idea is here describe first the data sets, like CHIRPS. 
-
-After that for me is good think about the index which index are compute. After that i guess is a good idea say which is our repository of github are the data. But in Climate Risk Profiles - Repository we can put our scripts structure and definitions and here in the annexes chapter. Ok it's better when we start to show the results, if we have a short explanation about the interpretation. 
-
-The last chapter is only the reference and i guess said something about who do what. 
-<div>
+<!-- <div align="left"> --> 
+<!-- <div>--> 
 
 
 
@@ -105,12 +123,16 @@ GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
 
 # Results.
 
+<br>
+
+<br>
+
 
 #### Sud-Ouest district location
 
 :::::: {.columns}
 ::: {.column width="35%"}
-![County location](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Sud-Ouest.png){width="95%"}
+![County location](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Sud-Ouest.png){width="98%"}
 :::
 ::: {.column width="13%"}
 
@@ -120,125 +142,106 @@ GitHub (<https://github.com/haachicanoy/climate-risk-profiles>)
 :::
 ::::::
 
+<br>
+
+<br>
+
 
 #### Sud-Ouest Multi Annual Climate with Elevation profile
 
 :::::: {.columns}
-::: {.column width="32%"}
-![Elevation map](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_elevation.png){width="90%"}
+::: {.column width="34%"}
+![Elevation map](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/Sud-Ouest_elevation.png){width="100%"}
 :::
-::: {.column width="68%"}
+::: {.column width="66%"}
 ![Historic climate mean](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/A_Multi_Anual.png)
 :::
 ::::::
 
+<br>
 
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![Number of consecutive dry days _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_CDD_1.png){width=100%}
+![Number of consecutive dry days _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/CDD_past_S1.png){width=89%}
 
 :::
-::: {.column width="4%"}
-    
-:::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation in CDD _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_CDD_season_1.png){width=100%} 
 
 :::
 ::::::
 
+<br>
 
-
-
-
-fklhjafjkhaksjfa
-
-hasdjkfhskjdf
-
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![Maximum 5-day running average precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P5D_1.png){width=100%}
-
-:::
-::: {.column width="4%"}
+![Maximum 5-day running average precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/P5D_past_S1.png){width=89%}
 
 :::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation for P5D _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P5D_season_1.png){width=100%}
 
 :::
 ::::::
 
+<br>
 
-
-ajajammm dkjahskfhajkshfiuahyfidxhcnjkvnjdszghfhgasdhjvfbgsyhrtfghvbcxvhgsiaudfrg
-
-ksjalflasfa
-
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![95th percentile of daily precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_P95_1.png){width=100%}
-
-:::
-::: {.column width="4%"}
+![95th percentile of daily precipitation _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/P95_past_S1.png){width=89%}
 
 :::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation for P95 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_P95_season_1.png){width=100%}
 
 :::
 ::::::
 
+<br>
 
-nfhjkahsfkahskfhak
-
-jsaghkfdahgksjfa
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![Total number of days with maximum temperature greater or equal to 35°C _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_NT35_1.png){width=100%}
-
-:::
-::: {.column width="4%"}
+![Total number of days with maximum temperature greater or equal to 35°C _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/NT35_past_S1.png){width=89%}
 
 :::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation of NT35 _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_NT35_season_1.png){width=100%}
 
 :::
 ::::::
 
+<br>
 
-afiuyausikfyhakf
-
-fjkashgfjaghkdjsfhka
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![Moisture stress _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/Dif_ndws_1.png){width=100%}
-
-:::
-::: {.column width="4%"}
+![Moisture stress _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/ndws_past_S1.png){width=89%}
 
 :::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation of NDWS _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_ndws_season_1.png){width=100%}
 
@@ -246,54 +249,45 @@ fjkashgfjaghkdjsfhka
 ::::::
 
 
-mhfbsjamgsfjagsjfgaj
+<br>
 
-kjhsafjagfjhagjfgj
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![Start of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_SLGP_1.png){width=100%}
-
-:::
-::: {.column width="4%"}
+![Start of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/SLGP_past_1.png){width=89%}
 
 :::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation of SLGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_SLGP_season_1.png){width=100%}
 
 :::
 ::::::
 
-alksfhasfgjhasf
+<br>
 
-fnhjagfhasfa
+<br>
 
 
 :::::: {.columns}
-::: {.column width="52%"}
+::: {.column width="36%"}
 
-![Length of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/all_LGP_1.png){width=100%}
-
-:::
-::: {.column width="4%"}
+![Length of growing season 1](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/maps/LGP_past_1.png){width=89%}
 
 :::
-::: {.column width="44%"}
+::: {.column width="64%"}
 
 ![Temporal variation of LGP _(season 1)_](D:/OneDrive - CGIAR/Desktop/PARM_toolkit/slides/Sud-Ouest/time_series/ts_LGP_season_1.png){width=100%}
 
 :::
 ::::::
 
+<br>
 
-jkfshuyagsfas
-
-fhjaghsashjdfgasjk
-
-
+<br>
 
 
 :::::: {.columns}
